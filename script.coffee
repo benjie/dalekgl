@@ -125,24 +125,7 @@ window.APP = APP = new class
           @hexagons.push new Hexagon col * (offsetX + size), row * offsetY, size
         else
           @hexagons.push new Hexagon (3 + fiddle.x) * size/2 + col * (offsetX + size), row * offsetY, size
-          #@hexagons.push new Hexagon col * offsetX,  row * 2 * offsetY, size
 
-    @hexagons2 = [
-      new Hexagon 0, 0, size
-      new Hexagon offsetX, offsetY, size
-      new Hexagon offsetX, -offsetY, size
-      new Hexagon -offsetX, offsetY, size
-      new Hexagon -offsetX, -offsetY, size
-    ]
-    ###
-    new Hexagon 0,  0.4, 0.2
-    new Hexagon 0, -0.4, 0.2
-    new Hexagon -0.3, 0.2, 0.2
-    new Hexagon -0.3, -0.2, 0.2
-    new Hexagon 0, 0, 0.2
-    new Hexagon 0.3, 0.2, 0.2
-    new Hexagon 0.3, -0.2, 0.2
-    ###
     triangleVertexData = []
     triangleFacesData = []
     for hexagon, i in @hexagons

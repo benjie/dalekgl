@@ -127,17 +127,6 @@
           }
         }
       }
-      this.hexagons2 = [new Hexagon(0, 0, size), new Hexagon(offsetX, offsetY, size), new Hexagon(offsetX, -offsetY, size), new Hexagon(-offsetX, offsetY, size), new Hexagon(-offsetX, -offsetY, size)];
-
-      /*
-      new Hexagon 0,  0.4, 0.2
-      new Hexagon 0, -0.4, 0.2
-      new Hexagon -0.3, 0.2, 0.2
-      new Hexagon -0.3, -0.2, 0.2
-      new Hexagon 0, 0, 0.2
-      new Hexagon 0.3, 0.2, 0.2
-      new Hexagon 0.3, -0.2, 0.2
-       */
       triangleVertexData = [];
       triangleFacesData = [];
       _ref = this.hexagons;
