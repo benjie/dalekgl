@@ -1,3 +1,4 @@
+TAN30 = Math.tan(Math.PI/6)
 class Hexagon
   ###
      1 ____ 2
@@ -13,7 +14,7 @@ class Hexagon
     # T = O / A
     # T(30) = edgeLength/2 / A
     # A = edgeLength / (2 * Tan(30))
-    hexHeight = edgeLength / (Math.tan(Math.PI/6))
+    hexHeight = edgeLength / TAN30
     verticies = [
       [@x - edgeLength / 2, @y + hexHeight / 2]
       [@x + edgeLength / 2, @y + hexHeight / 2]
@@ -111,30 +112,49 @@ window.APP = APP = new class
     return true
 
   initTriangle: ->
-    @hexagons = [
-      new Hexagon 0, 0, 0.5
+    size = 0.2
+    fiddle =
+      x: 1/10
+      y: 1/10 * TAN30 / 2
+    offsetX = size * (2 + fiddle.x)
+    offsetY = size * (1/(2*TAN30) + fiddle.y)
+    @hexagons = []
+    for row in [-5..5]
+      for col in [-5..5]
+        if Math.abs(row % 2) is 1
+          @hexagons.push new Hexagon col * (offsetX + size), row * offsetY, size
+        else
+          @hexagons.push new Hexagon (3 + fiddle.x) * size/2 + col * (offsetX + size), row * offsetY, size
+          #@hexagons.push new Hexagon col * offsetX,  row * 2 * offsetY, size
+
+    @hexagons2 = [
+      new Hexagon 0, 0, size
+      new Hexagon offsetX, offsetY, size
+      new Hexagon offsetX, -offsetY, size
+      new Hexagon -offsetX, offsetY, size
+      new Hexagon -offsetX, -offsetY, size
     ]
+    ###
+    new Hexagon 0,  0.4, 0.2
+    new Hexagon 0, -0.4, 0.2
+    new Hexagon -0.3, 0.2, 0.2
+    new Hexagon -0.3, -0.2, 0.2
+    new Hexagon 0, 0, 0.2
+    new Hexagon 0.3, 0.2, 0.2
+    new Hexagon 0.3, -0.2, 0.2
+    ###
     triangleVertexData = []
     triangleFacesData = []
     for hexagon, i in @hexagons
       verticiesData = hexagon.verticiesData()
       triangleVertexData.push datum for datum in verticiesData
-      facesData = hexagon.facesData(i * 4)
+      facesData = hexagon.facesData(i * 6)
       triangleFacesData.push datum for datum in facesData
-    console.dir triangleVertexData
-    console.dir triangleFacesData
 
-    #triangleVertexData = [
-    #  -1,-1,   0,0,1,
-    #  1,-1,    1,1,0,
-    #  1,1,     1,0,0,
-    #  -1,1,    1,0,1,
-    #]
     @triangleVertex = @GL.createBuffer()
     @GL.bindBuffer(@GL.ARRAY_BUFFER, @triangleVertex)
     @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
 
-    #triangleFacesData = [0,1,2,   0,2,3]
     @triangleFaces = @GL.createBuffer()
     @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @triangleFaces)
     @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
@@ -164,7 +184,6 @@ window.APP = APP = new class
 
     @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @triangleFaces)
     @GL.drawElements(@GL.TRIANGLES, @hexagons.length * 4 * 3, @GL.UNSIGNED_SHORT, 0)
-    #@GL.drawElements(@GL.TRIANGLES,  3, @GL.UNSIGNED_SHORT, 0)
     @GL.flush()
 
     window.requestAnimationFrame(@draw)
