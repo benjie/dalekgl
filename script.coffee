@@ -134,6 +134,7 @@ window.APP = APP = new class
     attribute vec2 position;
     attribute vec2 texPosition;
     uniform float factor;
+    uniform float screenRatio;
     varying vec2 vUV;
 
     void main(void) {
@@ -141,7 +142,7 @@ window.APP = APP = new class
       pos.x *= factor;
       gl_Position = vec4(pos, 0., 1.);
       vec2 pos2 = texPosition;
-      pos2.x *= factor;
+      pos2.x /= screenRatio;
       pos2 = pos2 + 1.;
       pos2 = pos2 / 2.;
       vUV = pos2;
@@ -194,6 +195,7 @@ window.APP = APP = new class
     @_position = @GL.getAttribLocation(shaderProgram, "position")
     @_texPosition = @GL.getAttribLocation(shaderProgram, "texPosition")
     @_factor = @GL.getUniformLocation(shaderProgram, "factor")
+    @_screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
     @_sampler = @GL.getUniformLocation(shaderProgram, "sampler")
 
     @GL.enableVertexAttribArray(@_position)
@@ -317,6 +319,7 @@ window.APP = APP = new class
     @GL.clear(@GL.COLOR_BUFFER_BIT)
 
     @GL.uniform1f(@_factor, canvas.height / canvas.width)
+    @GL.uniform1f(@_screenRatio, SCREEN_RATIO)
     @GL.uniform1i(@_sampler, 0)
 
     @GL.bindTexture(@GL.TEXTURE_2D, @texture)

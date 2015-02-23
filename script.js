@@ -147,7 +147,7 @@
 
     _Class.prototype.FRAGMENT = 3;
 
-    _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x *= factor;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
+    _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
 
     _Class.prototype.fragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_FragColor = texture2D(sampler, vUV);\n}";
 
@@ -194,6 +194,7 @@
       this._position = this.GL.getAttribLocation(shaderProgram, "position");
       this._texPosition = this.GL.getAttribLocation(shaderProgram, "texPosition");
       this._factor = this.GL.getUniformLocation(shaderProgram, "factor");
+      this._screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
       this._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
       this.GL.enableVertexAttribArray(this._position);
       this.GL.enableVertexAttribArray(this._texPosition);
@@ -324,6 +325,7 @@
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
       this.GL.uniform1f(this._factor, canvas.height / canvas.width);
+      this.GL.uniform1f(this._screenRatio, SCREEN_RATIO);
       this.GL.uniform1i(this._sampler, 0);
       this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
       this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, this.video);
