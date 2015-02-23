@@ -2,6 +2,8 @@ TAN30 = Math.tan(Math.PI/6)
 OUTER_RING_RADIUS = 0.95
 INNER_RING_RADIUS = 0.7
 HEXAGONS_HIGH = 55
+SCREEN_RATIO = 16/9 # 16:9 ratio
+SMALL_HEXAGONS_HIGH = 75
 
 distanceFromCenter = (v) ->
   (v[0] ** 2 + v[1] ** 2) ** 0.5
@@ -191,9 +193,7 @@ window.APP = APP = new class
 
     return true
 
-  initOuterHexagons: ->
-    hexagonsHigh = HEXAGONS_HIGH
-    widthToHeight = 16/9 # 16:9 ratio
+  initHexagons: (hexagons, hexagonsHigh, widthToHeight, minR, maxR) ->
 
     size = 2 / (hexagonsHigh / TAN30)
     fiddle =
@@ -201,7 +201,6 @@ window.APP = APP = new class
       y: 3/10 * TAN30 / 2
     offsetX = size * (2 + fiddle.x)
     offsetY = size * (1/(2*TAN30) + fiddle.y)
-    @hexagons = []
     for row in [-hexagonsHigh..hexagonsHigh]
       highIndex = hexagonsHigh * widthToHeight * TAN30 / 2
       for col in [-highIndex..highIndex]
@@ -211,24 +210,24 @@ window.APP = APP = new class
           else
             (3 + fiddle.x) * size/2 + col * (offsetX + size)
         y = row * offsetY
-        @hexagons.push new Hexagon x, y, size, Infinity, OUTER_RING_RADIUS
+        hexagons.push new Hexagon x, y, size, maxR, minR
 
     triangleVertexData = []
     triangleFacesData = []
-    for hexagon, i in @hexagons
+    for hexagon, i in hexagons
       previousVerticiesCount = triangleVertexData.length / 5
       {verticiesData, facesData} = hexagon.data(previousVerticiesCount)
       triangleVertexData.push datum for datum in verticiesData
       triangleFacesData.push datum for datum in facesData
 
-    @triangleVertexData = triangleVertexData
-    @triangleVertex = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ARRAY_BUFFER, @triangleVertex)
+    hexagons.triangleVertexData = triangleVertexData
+    hexagons.triangleVertex = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
     @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
 
-    @triangleFacesData = triangleFacesData
-    @triangleFaces = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @triangleFaces)
+    hexagons.triangleFacesData = triangleFacesData
+    hexagons.triangleFaces = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
     @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
 
     return true
@@ -238,7 +237,11 @@ window.APP = APP = new class
       @initCanvas()
       @initGLContext()
       @initShaders()
-      @initOuterHexagons()
+      fiddle = 1/150
+      @bigHexagons = []
+      @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity)
+      @smallHexagons = []
+      @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS)
       @GL.clearColor(0.0, 0.0, 0.0, 0.0)
       return true
     catch e
@@ -252,12 +255,14 @@ window.APP = APP = new class
 
     @GL.uniform1f(@_factor, canvas.height / canvas.width)
 
-    @GL.bindBuffer(@GL.ARRAY_BUFFER, @triangleVertex)
-    @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+3), 0)
-    @GL.vertexAttribPointer(@_color, 3, @GL.FLOAT, false, 4*(2+3), 2*4)
+    for hexagons in [@bigHexagons, @smallHexagons]
+      @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
+      @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+3), 0)
+      @GL.vertexAttribPointer(@_color, 3, @GL.FLOAT, false, 4*(2+3), 2*4)
 
-    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @triangleFaces)
-    @GL.drawElements(@GL.TRIANGLES, @triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+      @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
+      @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+
     @GL.flush()
 
     window.requestAnimationFrame(@draw)
