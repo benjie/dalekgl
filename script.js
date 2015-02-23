@@ -156,9 +156,9 @@
 
     _Class.prototype.fragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_FragColor = texture2D(sampler, vUV);\n}";
 
-    _Class.prototype.bumpVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
+    _Class.prototype.bumpVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\nvarying float r;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  r = position[0] == position[1] && position[0] == 0. ? 0.7 : 1.;\n  vUV = pos2;\n}";
 
-    _Class.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_FragColor = texture2D(sampler, vUV);\n}";
+    _Class.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nvarying float r;\n\nvoid main(void) {\n  vec2 uv = vUV * 2. - 1.;\n  uv[0] *= pow(r, 1.3);\n  uv[1] *= pow(r, 1.3);\n  uv = (uv + 1.) / 2.;\n  gl_FragColor = texture2D(sampler, uv);\n}";
 
     _Class.prototype.getShader = function(type, source) {
       var shader;

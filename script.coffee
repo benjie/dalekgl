@@ -166,6 +166,7 @@ window.APP = APP = new class
     uniform float factor;
     uniform float screenRatio;
     varying vec2 vUV;
+    varying float r;
 
     void main(void) {
       vec2 pos = position;
@@ -175,6 +176,7 @@ window.APP = APP = new class
       pos2.x /= screenRatio;
       pos2 = pos2 + 1.;
       pos2 = pos2 / 2.;
+      r = position[0] == position[1] && position[0] == 0. ? 0.7 : 1.;
       vUV = pos2;
     }
     """
@@ -183,9 +185,14 @@ window.APP = APP = new class
     precision mediump float;
     uniform sampler2D sampler;
     varying vec2 vUV;
+    varying float r;
 
     void main(void) {
-      gl_FragColor = texture2D(sampler, vUV);
+      vec2 uv = vUV * 2. - 1.;
+      uv[0] *= pow(r, 1.3);
+      uv[1] *= pow(r, 1.3);
+      uv = (uv + 1.) / 2.;
+      gl_FragColor = texture2D(sampler, uv);
     }
     """
 
