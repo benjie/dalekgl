@@ -156,8 +156,12 @@ window.APP = APP = new class
     uniform sampler2D sampler;
     varying vec2 vUV;
 
+    vec4 tintcolor = vec4(0.4, 0.4, 1., 1.);
+
     void main(void) {
-      gl_FragColor = texture2D(sampler, vUV);
+      vec4 raw = texture2D(sampler, vUV);
+      float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));
+      gl_FragColor = tintcolor * vec4(gray,gray,gray,1.0);
     }
     """
 
@@ -187,12 +191,16 @@ window.APP = APP = new class
     varying vec2 vUV;
     varying float r;
 
+    vec4 tintcolor = vec4(0.4, 0.4, 1., 1.);
+
     void main(void) {
       vec2 uv = vUV * 2. - 1.;
       uv[0] *= pow(r, 1.3);
       uv[1] *= pow(r, 1.3);
       uv = (uv + 1.) / 2.;
-      gl_FragColor = texture2D(sampler, uv);
+      vec4 raw = texture2D(sampler, uv);
+      float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));
+      gl_FragColor = tintcolor * vec4(gray,gray,gray,1.0);
     }
     """
 
