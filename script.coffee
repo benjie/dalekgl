@@ -5,6 +5,8 @@ HEXAGONS_HIGH = 55
 SCREEN_RATIO = 16/9 # 16:9 ratio
 SMALL_HEXAGONS_HIGH = 75
 CIRCLE_SEGMENTS = 32
+OUTER_ZOOM_FACTOR = 1.12
+INNER_ZOOM_FACTOR = 1.05
 
 distanceFromCenter = (v) ->
   (v[0] ** 2 + v[1] ** 2) ** 0.5
@@ -17,7 +19,7 @@ class Hexagon
     \ | /\ | /
     5\|/__\|/4
   ###
-  constructor: (@x, @y, @size, @maxRadius, @minRadius) ->
+  constructor: (@x, @y, @size, @maxRadius, @minRadius, @zoomFactor) ->
 
   data: (n) ->
     edgeLength = @size
@@ -117,8 +119,8 @@ class Hexagon
         [1, 0, 1]
         [0, 1, 1]
       ]
-      px = @x
-      py = @y
+      px = @x / @zoomFactor
+      py = @y / @zoomFactor
       for [x, y], i in verticies
         verticiesData.push x
         verticiesData.push y
@@ -249,7 +251,7 @@ window.APP = APP = new class
 
     return true
 
-  initHexagons: (hexagons, hexagonsHigh, widthToHeight, minR, maxR) ->
+  initHexagons: (hexagons, hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) ->
 
     size = 2 / (hexagonsHigh / TAN30)
     fiddle =
@@ -266,7 +268,7 @@ window.APP = APP = new class
           else
             (3 + fiddle.x) * size/2 + col * (offsetX + size)
         y = row * offsetY
-        hexagons.push new Hexagon x, y, size, maxR, minR
+        hexagons.push new Hexagon x, y, size, maxR, minR, zoomFactor
 
     triangleVertexData = []
     triangleFacesData = []
@@ -345,9 +347,9 @@ window.APP = APP = new class
       @initBumpShaders()
       fiddle = 1/150
       @bigHexagons = []
-      @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity)
+      @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity, OUTER_ZOOM_FACTOR)
       @smallHexagons = []
-      @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS)
+      @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
       @circleSegments = []
       @initCircleSegments(@circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS)
       @initTexture()
