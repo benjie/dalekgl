@@ -117,12 +117,13 @@ class Hexagon
         [1, 0, 1]
         [0, 1, 1]
       ]
+      px = @x
+      py = @y
       for [x, y], i in verticies
         verticiesData.push x
         verticiesData.push y
-        verticiesData.push colours[i][0]
-        verticiesData.push colours[i][1]
-        verticiesData.push colours[i][2]
+        verticiesData.push px
+        verticiesData.push py
     return verticiesData: verticiesData, facesData: facesData
 
 window.APP = APP = new class
@@ -131,24 +132,29 @@ window.APP = APP = new class
 
   vertexShaderSource: """
     attribute vec2 position;
-    attribute vec3 color;
+    attribute vec2 texPosition;
     uniform float factor;
+    varying vec2 vUV;
 
-    varying vec3 vColor;
     void main(void) {
       vec2 pos = position;
       pos.x *= factor;
       gl_Position = vec4(pos, 0., 1.);
-      vColor=color;
+      vec2 pos2 = texPosition;
+      pos2.x *= factor;
+      pos2 = pos2 + 1.;
+      pos2 = pos2 / 2.;
+      vUV = pos2;
     }
     """
 
   fragmentShaderSource: """
     precision mediump float;
+    uniform sampler2D sampler;
+    varying vec2 vUV;
 
-    varying vec3 vColor;
     void main(void) {
-      gl_FragColor = vec4(0, 0, 1, 1.);
+      gl_FragColor = texture2D(sampler, vUV);
     }
     """
 
@@ -185,12 +191,13 @@ window.APP = APP = new class
     @GL.linkProgram(shaderProgram)
 
     @shaderProgram = shaderProgram
-    @_color = @GL.getAttribLocation(shaderProgram, "color")
     @_position = @GL.getAttribLocation(shaderProgram, "position")
+    @_texPosition = @GL.getAttribLocation(shaderProgram, "texPosition")
     @_factor = @GL.getUniformLocation(shaderProgram, "factor")
+    @_sampler = @GL.getUniformLocation(shaderProgram, "sampler")
 
-    @GL.enableVertexAttribArray(@_color)
     @GL.enableVertexAttribArray(@_position)
+    @GL.enableVertexAttribArray(@_texPosition)
 
     return true
 
@@ -216,7 +223,7 @@ window.APP = APP = new class
     triangleVertexData = []
     triangleFacesData = []
     for hexagon, i in hexagons
-      previousVerticiesCount = triangleVertexData.length / 5
+      previousVerticiesCount = triangleVertexData.length / 4
       {verticiesData, facesData} = hexagon.data(previousVerticiesCount)
       triangleVertexData.push datum for datum in verticiesData
       triangleFacesData.push datum for datum in facesData
@@ -253,7 +260,6 @@ window.APP = APP = new class
       triangleVertexData.push vertex[1]
       triangleVertexData.push i % 2
       triangleVertexData.push i % 2
-      triangleVertexData.push i % 2
 
     triangleFacesData = []
     for face in faces
@@ -272,6 +278,19 @@ window.APP = APP = new class
 
     return true
 
+  initTexture: ->
+    # https://dev.opera.com/articles/webgl-post-processing/
+    @texture = @GL.createTexture()
+    @GL.pixelStorei(@GL.UNPACK_FLIP_Y_WEBGL, true)
+    @GL.bindTexture(@GL.TEXTURE_2D, @texture)
+    @GL.texParameteri(@GL.TEXTURE_2D, @GL.TEXTURE_WRAP_S, @GL.CLAMP_TO_EDGE)
+    @GL.texParameteri(@GL.TEXTURE_2D, @GL.TEXTURE_WRAP_T, @GL.CLAMP_TO_EDGE)
+    @GL.texParameteri(@GL.TEXTURE_2D, @GL.TEXTURE_MIN_FILTER, @GL.NEAREST)
+    @GL.texParameteri(@GL.TEXTURE_2D, @GL.TEXTURE_MAG_FILTER, @GL.NEAREST)
+    @GL.bindTexture(@GL.TEXTURE_2D, null)
+
+    return
+
   init: ->
     try
       @initCanvas()
@@ -284,6 +303,8 @@ window.APP = APP = new class
       @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS)
       @circleSegments = []
       @initCircleSegments(@circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS)
+      @initTexture()
+      @video = document.getElementsByTagName('video')[0]
       @GL.clearColor(0.0, 0.0, 0.0, 0.0)
       return true
     catch e
@@ -296,18 +317,22 @@ window.APP = APP = new class
     @GL.clear(@GL.COLOR_BUFFER_BIT)
 
     @GL.uniform1f(@_factor, canvas.height / canvas.width)
+    @GL.uniform1i(@_sampler, 0)
+
+    @GL.bindTexture(@GL.TEXTURE_2D, @texture)
+    @GL.texImage2D(@GL.TEXTURE_2D, 0, @GL.RGBA, @GL.RGBA, @GL.UNSIGNED_BYTE, @video)
 
     for hexagons in [@bigHexagons, @smallHexagons]
       @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
-      @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+3), 0)
-      @GL.vertexAttribPointer(@_color, 3, @GL.FLOAT, false, 4*(2+3), 2*4)
+      @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+2), 0)
+      @GL.vertexAttribPointer(@_texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
 
       @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
       @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
     @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
-    @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+3), 0)
-    @GL.vertexAttribPointer(@_color, 3, @GL.FLOAT, false, 4*(2+3), 2*4)
+    @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+2), 0)
+    @GL.vertexAttribPointer(@_texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
 
     @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
     @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
@@ -318,8 +343,11 @@ window.APP = APP = new class
     return
 
   run: ->
-    @GL.useProgram(@shaderProgram)
-    @draw()
+    navigator.webkitGetUserMedia {video: true}, (localMediaStream) =>
+      @video.src = window.URL.createObjectURL(localMediaStream)
+      @GL.useProgram(@shaderProgram)
+      @draw()
+    , -> alert("GUM fail.")
 
   start: =>
     @init() and @run()

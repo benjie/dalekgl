@@ -39,7 +39,7 @@
     }
 
     Hexagon.prototype.data = function(n) {
-      var colours, edgeLength, face, faces, facesData, hexHeight, i, inside, isInside, j, k, moveVertexToward, other, point, r, target, vertex, vertexIndex, verticies, verticiesData, x, y, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _m, _n, _o, _p, _ref, _ref1;
+      var colours, edgeLength, face, faces, facesData, hexHeight, i, inside, isInside, j, k, moveVertexToward, other, point, px, py, r, target, vertex, vertexIndex, verticies, verticiesData, x, y, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _m, _n, _o, _p, _ref, _ref1;
       edgeLength = this.size;
       hexHeight = edgeLength / TAN30;
       verticies = [[this.x - edgeLength / 2, this.y + hexHeight / 2], [this.x + edgeLength / 2, this.y + hexHeight / 2], [this.x + edgeLength, this.y], [this.x + edgeLength / 2, this.y - hexHeight / 2], [this.x - edgeLength / 2, this.y - hexHeight / 2], [this.x - edgeLength, this.y]];
@@ -116,13 +116,14 @@
           }
         }
         colours = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1], [0, 1, 1]];
+        px = this.x;
+        py = this.y;
         for (i = _p = 0, _len6 = verticies.length; _p < _len6; i = ++_p) {
           _ref1 = verticies[i], x = _ref1[0], y = _ref1[1];
           verticiesData.push(x);
           verticiesData.push(y);
-          verticiesData.push(colours[i][0]);
-          verticiesData.push(colours[i][1]);
-          verticiesData.push(colours[i][2]);
+          verticiesData.push(px);
+          verticiesData.push(py);
         }
       }
       return {
@@ -146,9 +147,9 @@
 
     _Class.prototype.FRAGMENT = 3;
 
-    _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec3 color;\nuniform float factor;\n\nvarying vec3 vColor;\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vColor=color;\n}";
+    _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x *= factor;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
 
-    _Class.prototype.fragmentShaderSource = "precision mediump float;\n\nvarying vec3 vColor;\nvoid main(void) {\n  gl_FragColor = vec4(0, 0, 1, 1.);\n}";
+    _Class.prototype.fragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_FragColor = texture2D(sampler, vUV);\n}";
 
     _Class.prototype.getShader = function(type, source) {
       var shader;
@@ -190,11 +191,12 @@
       this.GL.attachShader(shaderProgram, fragmentShader);
       this.GL.linkProgram(shaderProgram);
       this.shaderProgram = shaderProgram;
-      this._color = this.GL.getAttribLocation(shaderProgram, "color");
       this._position = this.GL.getAttribLocation(shaderProgram, "position");
+      this._texPosition = this.GL.getAttribLocation(shaderProgram, "texPosition");
       this._factor = this.GL.getUniformLocation(shaderProgram, "factor");
-      this.GL.enableVertexAttribArray(this._color);
+      this._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
       this.GL.enableVertexAttribArray(this._position);
+      this.GL.enableVertexAttribArray(this._texPosition);
       return true;
     };
 
@@ -219,7 +221,7 @@
       triangleFacesData = [];
       for (i = _k = 0, _len = hexagons.length; _k < _len; i = ++_k) {
         hexagon = hexagons[i];
-        previousVerticiesCount = triangleVertexData.length / 5;
+        previousVerticiesCount = triangleVertexData.length / 4;
         _ref = hexagon.data(previousVerticiesCount), verticiesData = _ref.verticiesData, facesData = _ref.facesData;
         for (_l = 0, _len1 = verticiesData.length; _l < _len1; _l++) {
           datum = verticiesData[_l];
@@ -261,7 +263,6 @@
         triangleVertexData.push(vertex[1]);
         triangleVertexData.push(i % 2);
         triangleVertexData.push(i % 2);
-        triangleVertexData.push(i % 2);
       }
       triangleFacesData = [];
       for (_l = 0, _len1 = faces.length; _l < _len1; _l++) {
@@ -282,6 +283,17 @@
       return true;
     };
 
+    _Class.prototype.initTexture = function() {
+      this.texture = this.GL.createTexture();
+      this.GL.pixelStorei(this.GL.UNPACK_FLIP_Y_WEBGL, true);
+      this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
+      this.GL.texParameteri(this.GL.TEXTURE_2D, this.GL.TEXTURE_WRAP_S, this.GL.CLAMP_TO_EDGE);
+      this.GL.texParameteri(this.GL.TEXTURE_2D, this.GL.TEXTURE_WRAP_T, this.GL.CLAMP_TO_EDGE);
+      this.GL.texParameteri(this.GL.TEXTURE_2D, this.GL.TEXTURE_MIN_FILTER, this.GL.NEAREST);
+      this.GL.texParameteri(this.GL.TEXTURE_2D, this.GL.TEXTURE_MAG_FILTER, this.GL.NEAREST);
+      this.GL.bindTexture(this.GL.TEXTURE_2D, null);
+    };
+
     _Class.prototype.init = function() {
       var e, fiddle;
       try {
@@ -295,6 +307,8 @@
         this.initHexagons(this.smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS);
         this.circleSegments = [];
         this.initCircleSegments(this.circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS);
+        this.initTexture();
+        this.video = document.getElementsByTagName('video')[0];
         this.GL.clearColor(0.0, 0.0, 0.0, 0.0);
         return true;
       } catch (_error) {
@@ -310,18 +324,21 @@
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
       this.GL.uniform1f(this._factor, canvas.height / canvas.width);
+      this.GL.uniform1i(this._sampler, 0);
+      this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
+      this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, this.video);
       _ref = [this.bigHexagons, this.smallHexagons];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         hexagons = _ref[_i];
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, hexagons.triangleVertex);
-        this.GL.vertexAttribPointer(this._position, 2, this.GL.FLOAT, false, 4 * (2 + 3), 0);
-        this.GL.vertexAttribPointer(this._color, 3, this.GL.FLOAT, false, 4 * (2 + 3), 2 * 4);
+        this.GL.vertexAttribPointer(this._position, 2, this.GL.FLOAT, false, 4 * (2 + 2), 0);
+        this.GL.vertexAttribPointer(this._texPosition, 2, this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);
         this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces);
         this.GL.drawElements(this.GL.TRIANGLES, hexagons.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
       }
       this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.circleSegments.triangleVertex);
-      this.GL.vertexAttribPointer(this._position, 2, this.GL.FLOAT, false, 4 * (2 + 3), 0);
-      this.GL.vertexAttribPointer(this._color, 3, this.GL.FLOAT, false, 4 * (2 + 3), 2 * 4);
+      this.GL.vertexAttribPointer(this._position, 2, this.GL.FLOAT, false, 4 * (2 + 2), 0);
+      this.GL.vertexAttribPointer(this._texPosition, 2, this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);
       this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.circleSegments.triangleFaces);
       this.GL.drawElements(this.GL.TRIANGLES, this.circleSegments.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
       this.GL.flush();
@@ -329,8 +346,17 @@
     };
 
     _Class.prototype.run = function() {
-      this.GL.useProgram(this.shaderProgram);
-      return this.draw();
+      return navigator.webkitGetUserMedia({
+        video: true
+      }, (function(_this) {
+        return function(localMediaStream) {
+          _this.video.src = window.URL.createObjectURL(localMediaStream);
+          _this.GL.useProgram(_this.shaderProgram);
+          return _this.draw();
+        };
+      })(this), function() {
+        return alert("GUM fail.");
+      });
     };
 
     _Class.prototype.start = function() {
