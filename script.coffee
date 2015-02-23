@@ -57,10 +57,13 @@ window.APP = APP = new class
   vertexShaderSource: """
     attribute vec2 position;
     attribute vec3 color;
+    uniform float factor;
 
     varying vec3 vColor;
     void main(void) {
-      gl_Position = vec4(position, 0., 1.);
+      vec2 pos = position;
+      pos.x *= factor;
+      gl_Position = vec4(pos, 0., 1.);
       vColor=color;
     }
     """
@@ -83,11 +86,15 @@ window.APP = APP = new class
       return false
     return shader
 
+  resizeCanvas: =>
+    @canvas.width = window.innerWidth
+    @canvas.height = window.innerHeight
+    return
+
   initCanvas: ->
-    canvas = document.getElementById("canvas")
-    canvas.width = window.innerWidth
-    canvas.height = window.innerHeight
-    @canvas = canvas
+    @canvas = document.getElementById("canvas")
+    @resizeCanvas()
+    window.addEventListener 'resize', @resizeCanvas, true
     return true
 
   initGLContext: ->
@@ -105,6 +112,7 @@ window.APP = APP = new class
     @shaderProgram = shaderProgram
     @_color = @GL.getAttribLocation(shaderProgram, "color")
     @_position = @GL.getAttribLocation(shaderProgram, "position")
+    @_factor = @GL.getUniformLocation(shaderProgram, "factor")
 
     @GL.enableVertexAttribArray(@_color)
     @GL.enableVertexAttribArray(@_position)
@@ -161,6 +169,8 @@ window.APP = APP = new class
     @GL.viewport(0.0, 0.0, @canvas.width, @canvas.height)
     @GL.clear(@GL.COLOR_BUFFER_BIT)
 
+    @GL.uniform1f(@_factor, canvas.height / canvas.width)
+
     @GL.bindBuffer(@GL.ARRAY_BUFFER, @triangleVertex)
     @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+3), 0)
     @GL.vertexAttribPointer(@_color, 3, @GL.FLOAT, false, 4*(2+3), 2*4)
@@ -170,6 +180,7 @@ window.APP = APP = new class
     @GL.flush()
 
     window.requestAnimationFrame(@draw)
+    return
 
   run: ->
     @GL.useProgram(@shaderProgram)

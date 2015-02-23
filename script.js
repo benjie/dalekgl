@@ -54,13 +54,14 @@
     function _Class() {
       this.start = __bind(this.start, this);
       this.draw = __bind(this.draw, this);
+      this.resizeCanvas = __bind(this.resizeCanvas, this);
     }
 
     _Class.prototype.VERTEX = 2;
 
     _Class.prototype.FRAGMENT = 3;
 
-    _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec3 color;\n\nvarying vec3 vColor;\nvoid main(void) {\n  gl_Position = vec4(position, 0., 1.);\n  vColor=color;\n}";
+    _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec3 color;\nuniform float factor;\n\nvarying vec3 vColor;\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vColor=color;\n}";
 
     _Class.prototype.fragmentShaderSource = "precision mediump float;\n\nvarying vec3 vColor;\nvoid main(void) {\n  gl_FragColor = vec4(vColor, 1.);\n}";
 
@@ -76,12 +77,15 @@
       return shader;
     };
 
+    _Class.prototype.resizeCanvas = function() {
+      this.canvas.width = window.innerWidth;
+      this.canvas.height = window.innerHeight;
+    };
+
     _Class.prototype.initCanvas = function() {
-      var canvas;
-      canvas = document.getElementById("canvas");
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      this.canvas = canvas;
+      this.canvas = document.getElementById("canvas");
+      this.resizeCanvas();
+      window.addEventListener('resize', this.resizeCanvas, true);
       return true;
     };
 
@@ -103,6 +107,7 @@
       this.shaderProgram = shaderProgram;
       this._color = this.GL.getAttribLocation(shaderProgram, "color");
       this._position = this.GL.getAttribLocation(shaderProgram, "position");
+      this._factor = this.GL.getUniformLocation(shaderProgram, "factor");
       this.GL.enableVertexAttribArray(this._color);
       this.GL.enableVertexAttribArray(this._position);
       return true;
@@ -172,13 +177,14 @@
     _Class.prototype.draw = function() {
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
+      this.GL.uniform1f(this._factor, canvas.height / canvas.width);
       this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.triangleVertex);
       this.GL.vertexAttribPointer(this._position, 2, this.GL.FLOAT, false, 4 * (2 + 3), 0);
       this.GL.vertexAttribPointer(this._color, 3, this.GL.FLOAT, false, 4 * (2 + 3), 2 * 4);
       this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.triangleFaces);
       this.GL.drawElements(this.GL.TRIANGLES, this.hexagons.length * 4 * 3, this.GL.UNSIGNED_SHORT, 0);
       this.GL.flush();
-      return window.requestAnimationFrame(this.draw);
+      window.requestAnimationFrame(this.draw);
     };
 
     _Class.prototype.run = function() {
