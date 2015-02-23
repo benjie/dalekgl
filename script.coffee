@@ -159,6 +159,34 @@ window.APP = APP = new class
     }
     """
 
+  bumpVertexShaderSource: """
+    attribute vec2 position;
+    uniform float factor;
+    uniform float screenRatio;
+    varying vec2 vUV;
+
+    void main(void) {
+      vec2 pos = position;
+      pos.x *= factor;
+      gl_Position = vec4(pos, 0., 1.);
+      vec2 pos2 = position;
+      pos2.x /= screenRatio;
+      pos2 = pos2 + 1.;
+      pos2 = pos2 / 2.;
+      vUV = pos2;
+    }
+    """
+
+  bumpFragmentShaderSource: """
+    precision mediump float;
+    uniform sampler2D sampler;
+    varying vec2 vUV;
+
+    void main(void) {
+      gl_FragColor = texture2D(sampler, vUV);
+    }
+    """
+
   getShader: (type, source) ->
     shader = @GL.createShader(type)
     @GL.shaderSource(shader, source)
@@ -200,6 +228,24 @@ window.APP = APP = new class
 
     @GL.enableVertexAttribArray(@_position)
     @GL.enableVertexAttribArray(@_texPosition)
+
+    return true
+
+  initBumpShaders: ->
+    vertexShader = @getShader(@GL.VERTEX_SHADER, @bumpVertexShaderSource)
+    fragmentShader = @getShader(@GL.FRAGMENT_SHADER, @bumpFragmentShaderSource)
+    shaderProgram = @GL.createProgram()
+    @GL.attachShader(shaderProgram, vertexShader)
+    @GL.attachShader(shaderProgram, fragmentShader)
+    @GL.linkProgram(shaderProgram)
+
+    @bumpShaderProgram = shaderProgram
+    @_2position = @GL.getAttribLocation(shaderProgram, "position")
+    @_2factor = @GL.getUniformLocation(shaderProgram, "factor")
+    @_2screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
+    @_2sampler = @GL.getUniformLocation(shaderProgram, "sampler")
+
+    @GL.enableVertexAttribArray(@_2position)
 
     return true
 
@@ -260,8 +306,6 @@ window.APP = APP = new class
     for vertex, i in verticies
       triangleVertexData.push vertex[0]
       triangleVertexData.push vertex[1]
-      triangleVertexData.push i % 2
-      triangleVertexData.push i % 2
 
     triangleFacesData = []
     for face in faces
@@ -298,6 +342,7 @@ window.APP = APP = new class
       @initCanvas()
       @initGLContext()
       @initShaders()
+      @initBumpShaders()
       fiddle = 1/150
       @bigHexagons = []
       @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity)
@@ -318,6 +363,7 @@ window.APP = APP = new class
     @GL.viewport(0.0, 0.0, @canvas.width, @canvas.height)
     @GL.clear(@GL.COLOR_BUFFER_BIT)
 
+    @GL.useProgram(@shaderProgram)
     @GL.uniform1f(@_factor, canvas.height / canvas.width)
     @GL.uniform1f(@_screenRatio, SCREEN_RATIO)
     @GL.uniform1i(@_sampler, 0)
@@ -333,9 +379,12 @@ window.APP = APP = new class
       @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
       @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
+    @GL.useProgram(@bumpShaderProgram)
+    @GL.uniform1f(@_2factor, canvas.height / canvas.width)
+    @GL.uniform1f(@_2screenRatio, SCREEN_RATIO)
+    @GL.uniform1i(@_2sampler, 0)
     @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
-    @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+2), 0)
-    @GL.vertexAttribPointer(@_texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
+    @GL.vertexAttribPointer(@_2position, 2, @GL.FLOAT, false, 4*(2+0), 0)
 
     @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
     @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
@@ -348,7 +397,6 @@ window.APP = APP = new class
   run: ->
     navigator.webkitGetUserMedia {video: true}, (localMediaStream) =>
       @video.src = window.URL.createObjectURL(localMediaStream)
-      @GL.useProgram(@shaderProgram)
       @draw()
     , -> alert("GUM fail.")
 

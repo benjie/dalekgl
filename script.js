@@ -151,6 +151,10 @@
 
     _Class.prototype.fragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_FragColor = texture2D(sampler, vUV);\n}";
 
+    _Class.prototype.bumpVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
+
+    _Class.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_FragColor = texture2D(sampler, vUV);\n}";
+
     _Class.prototype.getShader = function(type, source) {
       var shader;
       shader = this.GL.createShader(type);
@@ -198,6 +202,23 @@
       this._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
       this.GL.enableVertexAttribArray(this._position);
       this.GL.enableVertexAttribArray(this._texPosition);
+      return true;
+    };
+
+    _Class.prototype.initBumpShaders = function() {
+      var fragmentShader, shaderProgram, vertexShader;
+      vertexShader = this.getShader(this.GL.VERTEX_SHADER, this.bumpVertexShaderSource);
+      fragmentShader = this.getShader(this.GL.FRAGMENT_SHADER, this.bumpFragmentShaderSource);
+      shaderProgram = this.GL.createProgram();
+      this.GL.attachShader(shaderProgram, vertexShader);
+      this.GL.attachShader(shaderProgram, fragmentShader);
+      this.GL.linkProgram(shaderProgram);
+      this.bumpShaderProgram = shaderProgram;
+      this._2position = this.GL.getAttribLocation(shaderProgram, "position");
+      this._2factor = this.GL.getUniformLocation(shaderProgram, "factor");
+      this._2screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
+      this._2sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
+      this.GL.enableVertexAttribArray(this._2position);
       return true;
     };
 
@@ -262,8 +283,6 @@
         vertex = verticies[i];
         triangleVertexData.push(vertex[0]);
         triangleVertexData.push(vertex[1]);
-        triangleVertexData.push(i % 2);
-        triangleVertexData.push(i % 2);
       }
       triangleFacesData = [];
       for (_l = 0, _len1 = faces.length; _l < _len1; _l++) {
@@ -301,6 +320,7 @@
         this.initCanvas();
         this.initGLContext();
         this.initShaders();
+        this.initBumpShaders();
         fiddle = 1 / 150;
         this.bigHexagons = [];
         this.initHexagons(this.bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity);
@@ -324,6 +344,7 @@
       var hexagons, _i, _len, _ref;
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
+      this.GL.useProgram(this.shaderProgram);
       this.GL.uniform1f(this._factor, canvas.height / canvas.width);
       this.GL.uniform1f(this._screenRatio, SCREEN_RATIO);
       this.GL.uniform1i(this._sampler, 0);
@@ -338,9 +359,12 @@
         this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces);
         this.GL.drawElements(this.GL.TRIANGLES, hexagons.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
       }
+      this.GL.useProgram(this.bumpShaderProgram);
+      this.GL.uniform1f(this._2factor, canvas.height / canvas.width);
+      this.GL.uniform1f(this._2screenRatio, SCREEN_RATIO);
+      this.GL.uniform1i(this._2sampler, 0);
       this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.circleSegments.triangleVertex);
-      this.GL.vertexAttribPointer(this._position, 2, this.GL.FLOAT, false, 4 * (2 + 2), 0);
-      this.GL.vertexAttribPointer(this._texPosition, 2, this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);
+      this.GL.vertexAttribPointer(this._2position, 2, this.GL.FLOAT, false, 4 * (2 + 0), 0);
       this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.circleSegments.triangleFaces);
       this.GL.drawElements(this.GL.TRIANGLES, this.circleSegments.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
       this.GL.flush();
@@ -353,7 +377,6 @@
       }, (function(_this) {
         return function(localMediaStream) {
           _this.video.src = window.URL.createObjectURL(localMediaStream);
-          _this.GL.useProgram(_this.shaderProgram);
           return _this.draw();
         };
       })(this), function() {
