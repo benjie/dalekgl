@@ -4,6 +4,7 @@ INNER_RING_RADIUS = 0.7
 HEXAGONS_HIGH = 55
 SCREEN_RATIO = 16/9 # 16:9 ratio
 SMALL_HEXAGONS_HIGH = 75
+CIRCLE_SEGMENTS = 32
 
 distanceFromCenter = (v) ->
   (v[0] ** 2 + v[1] ** 2) ** 0.5
@@ -232,6 +233,45 @@ window.APP = APP = new class
 
     return true
 
+  initCircleSegments: (segments, segmentCount, radius) ->
+    angleStep = 2 * Math.PI / segmentCount
+    angle = 0
+    verticies = [[0, 0]]
+    for i in [0...segmentCount]
+      verticies.push [
+        radius * Math.sin(i * angleStep)
+        radius * Math.cos(i * angleStep)
+      ]
+    faces = []
+    for i in [1...segmentCount]
+      faces.push [0, i, i+1]
+    faces.push [0, segmentCount, 1]
+
+    triangleVertexData = []
+    for vertex, i in verticies
+      triangleVertexData.push vertex[0]
+      triangleVertexData.push vertex[1]
+      triangleVertexData.push i % 2
+      triangleVertexData.push i % 2
+      triangleVertexData.push i % 2
+
+    triangleFacesData = []
+    for face in faces
+      for point in face
+        triangleFacesData.push point
+
+    segments.triangleVertexData = triangleVertexData
+    segments.triangleVertex = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ARRAY_BUFFER, segments.triangleVertex)
+    @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
+
+    segments.triangleFacesData = triangleFacesData
+    segments.triangleFaces = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, segments.triangleFaces)
+    @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
+
+    return true
+
   init: ->
     try
       @initCanvas()
@@ -242,6 +282,8 @@ window.APP = APP = new class
       @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity)
       @smallHexagons = []
       @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS)
+      @circleSegments = []
+      @initCircleSegments(@circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS)
       @GL.clearColor(0.0, 0.0, 0.0, 0.0)
       return true
     catch e
@@ -262,6 +304,13 @@ window.APP = APP = new class
 
       @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
       @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+
+    @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
+    @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+3), 0)
+    @GL.vertexAttribPointer(@_color, 3, @GL.FLOAT, false, 4*(2+3), 2*4)
+
+    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
+    @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
     @GL.flush()
 
