@@ -296,10 +296,18 @@ window.APP = APP = new class
 
     for varName in attributes
       shaderProgram["_#{varName}"] = @GL.getAttribLocation(shaderProgram, varName)
-      @GL.enableVertexAttribArray(shaderProgram["_#{varName}"])
 
     for varName in uniforms
       shaderProgram["_#{varName}"] = @GL.getUniformLocation(shaderProgram, varName)
+
+    shaderProgram.use = (fn) =>
+      @GL.useProgram(shaderProgram)
+      for varName in attributes
+        @GL.enableVertexAttribArray(shaderProgram["_#{varName}"])
+      fn(shaderProgram)
+      for varName in attributes
+        @GL.disableVertexAttribArray(shaderProgram["_#{varName}"])
+      return
 
     return shaderProgram
 
@@ -388,7 +396,7 @@ window.APP = APP = new class
     ]
 
     @createVertexAndFaceBuffers(square, triangleVertexData, triangleFacesData)
-    return
+    return square
 
   initTexture: ->
     # https://dev.opera.com/articles/webgl-post-processing/
@@ -428,23 +436,6 @@ window.APP = APP = new class
     @GL.viewport(0.0, 0.0, @canvas.width, @canvas.height)
     @GL.clear(@GL.COLOR_BUFFER_BIT)
 
-    @GL.useProgram(@backgroundShaderProgram)
-    @GL.uniform1f(@backgroundShaderProgram._factor, canvas.height / canvas.width)
-    @GL.uniform1f(@backgroundShaderProgram._screenRatio, SCREEN_RATIO)
-    @GL.uniform1i(@backgroundShaderProgram._sampler, 0)
-
-    @GL.bindBuffer(@GL.ARRAY_BUFFER, @backgroundSquare.triangleVertex)
-    @GL.vertexAttribPointer(@backgroundShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+0), 0)
-
-    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @backgroundSquare.triangleFaces)
-    @GL.drawElements(@GL.TRIANGLES, @backgroundSquare.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
-
-
-    @GL.useProgram(@shaderProgram)
-    @GL.uniform1f(@shaderProgram._factor, canvas.height / canvas.width)
-    @GL.uniform1f(@shaderProgram._screenRatio, SCREEN_RATIO)
-    @GL.uniform1i(@shaderProgram._sampler, 0)
-
     @GL.bindTexture(@GL.TEXTURE_2D, @texture)
     textureSource =
       if @video.loaded and !@video.paused
@@ -453,25 +444,43 @@ window.APP = APP = new class
         @image
     @GL.texImage2D(@GL.TEXTURE_2D, 0, @GL.RGBA, @GL.RGBA, @GL.UNSIGNED_BYTE, textureSource)
 
-    for hexagons, i in [@bigHexagons, @smallHexagons]
-      @GL.uniform1f(@shaderProgram._brightnessAdjust, (if i == 0 then -0.14 else -0.06))
-      @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
-      @GL.vertexAttribPointer(@shaderProgram._position, 2, @GL.FLOAT, false, 4*(2+2), 0)
-      @GL.vertexAttribPointer(@shaderProgram._texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
+    @backgroundShaderProgram.use =>
+      @GL.uniform1f(@backgroundShaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@backgroundShaderProgram._screenRatio, SCREEN_RATIO)
+      @GL.uniform1i(@backgroundShaderProgram._sampler, 0)
 
-      @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
-      @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+      @GL.bindBuffer(@GL.ARRAY_BUFFER, @backgroundSquare.triangleVertex)
+      @GL.vertexAttribPointer(@backgroundShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+0), 0)
 
-    @GL.useProgram(@bumpShaderProgram)
-    @GL.uniform1f(@bumpShaderProgram._factor, canvas.height / canvas.width)
-    @GL.uniform1f(@bumpShaderProgram._screenRatio, SCREEN_RATIO)
-    @GL.uniform1i(@bumpShaderProgram._sampler, 0)
-    @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
-    @GL.vertexAttribPointer(@bumpShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+1), 0)
-    @GL.vertexAttribPointer(@bumpShaderProgram._r, 1, @GL.FLOAT, false, 4*(2+1), 4*2)
+      @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @backgroundSquare.triangleFaces)
+      @GL.drawElements(@GL.TRIANGLES, @backgroundSquare.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
-    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
-    @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+
+    @shaderProgram.use =>
+      @GL.uniform1f(@shaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@shaderProgram._screenRatio, SCREEN_RATIO)
+      @GL.uniform1i(@shaderProgram._sampler, 0)
+
+
+      for hexagons, i in [@bigHexagons, @smallHexagons]
+        @GL.uniform1f(@shaderProgram._brightnessAdjust, (if i == 0 then -0.14 else -0.06))
+        @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
+        @GL.vertexAttribPointer(@shaderProgram._position, 2, @GL.FLOAT, false, 4*(2+2), 0)
+        @GL.vertexAttribPointer(@shaderProgram._texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
+
+        @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
+        @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+
+    @bumpShaderProgram.use =>
+      @GL.uniform1f(@bumpShaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@bumpShaderProgram._screenRatio, SCREEN_RATIO)
+      @GL.uniform1i(@bumpShaderProgram._sampler, 0)
+      @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
+      @GL.vertexAttribPointer(@bumpShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+1), 0)
+      @GL.vertexAttribPointer(@bumpShaderProgram._r, 1, @GL.FLOAT, false, 4*(2+1), 4*2)
+
+      @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
+      @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
     @GL.flush()
 

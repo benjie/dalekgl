@@ -225,6 +225,21 @@
         varName = uniforms[_j];
         shaderProgram["_" + varName] = this.GL.getUniformLocation(shaderProgram, varName);
       }
+      shaderProgram.use = (function(_this) {
+        return function(fn) {
+          var _k, _l, _len2, _len3;
+          _this.GL.useProgram(shaderProgram);
+          for (_k = 0, _len2 = attributes.length; _k < _len2; _k++) {
+            varName = attributes[_k];
+            _this.GL.enableVertexAttribArray(shaderProgram["_" + varName]);
+          }
+          fn(shaderProgram);
+          for (_l = 0, _len3 = attributes.length; _l < _len3; _l++) {
+            varName = attributes[_l];
+            _this.GL.disableVertexAttribArray(shaderProgram["_" + varName]);
+          }
+        };
+      })(this);
       return shaderProgram;
     };
 
@@ -316,6 +331,7 @@
       triangleVertexData = [-1, -1, 1, -1, 1, 1, -1, 1];
       triangleFacesData = [0, 1, 2, 0, 2, 3];
       this.createVertexAndFaceBuffers(square, triangleVertexData, triangleFacesData);
+      return square;
     };
 
     _Class.prototype.initTexture = function() {
@@ -355,43 +371,55 @@
     };
 
     _Class.prototype.draw = function() {
-      var hexagons, i, textureSource, _i, _len, _ref;
+      var textureSource;
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
-      this.GL.useProgram(this.backgroundShaderProgram);
-      this.GL.uniform1f(this.backgroundShaderProgram._factor, canvas.height / canvas.width);
-      this.GL.uniform1f(this.backgroundShaderProgram._screenRatio, SCREEN_RATIO);
-      this.GL.uniform1i(this.backgroundShaderProgram._sampler, 0);
-      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.backgroundSquare.triangleVertex);
-      this.GL.vertexAttribPointer(this.backgroundShaderProgram._position, 2, this.GL.FLOAT, false, 4 * (2 + 0), 0);
-      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.backgroundSquare.triangleFaces);
-      this.GL.drawElements(this.GL.TRIANGLES, this.backgroundSquare.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
-      this.GL.useProgram(this.shaderProgram);
-      this.GL.uniform1f(this.shaderProgram._factor, canvas.height / canvas.width);
-      this.GL.uniform1f(this.shaderProgram._screenRatio, SCREEN_RATIO);
-      this.GL.uniform1i(this.shaderProgram._sampler, 0);
       this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
       textureSource = this.video.loaded && !this.video.paused ? this.video : this.image;
       this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, textureSource);
-      _ref = [this.bigHexagons, this.smallHexagons];
-      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
-        hexagons = _ref[i];
-        this.GL.uniform1f(this.shaderProgram._brightnessAdjust, (i === 0 ? -0.14 : -0.06));
-        this.GL.bindBuffer(this.GL.ARRAY_BUFFER, hexagons.triangleVertex);
-        this.GL.vertexAttribPointer(this.shaderProgram._position, 2, this.GL.FLOAT, false, 4 * (2 + 2), 0);
-        this.GL.vertexAttribPointer(this.shaderProgram._texPosition, 2, this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);
-        this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces);
-        this.GL.drawElements(this.GL.TRIANGLES, hexagons.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
-      }
-      this.GL.useProgram(this.bumpShaderProgram);
-      this.GL.uniform1f(this.bumpShaderProgram._factor, canvas.height / canvas.width);
-      this.GL.uniform1f(this.bumpShaderProgram._screenRatio, SCREEN_RATIO);
-      this.GL.uniform1i(this.bumpShaderProgram._sampler, 0);
-      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.circleSegments.triangleVertex);
-      this.GL.vertexAttribPointer(this.bumpShaderProgram._position, 2, this.GL.FLOAT, false, 4 * (2 + 1), 0);
-      this.GL.vertexAttribPointer(this.bumpShaderProgram._r, 1, this.GL.FLOAT, false, 4 * (2 + 1), 4 * 2);
-      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.circleSegments.triangleFaces);
-      this.GL.drawElements(this.GL.TRIANGLES, this.circleSegments.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
+      this.backgroundShaderProgram.use((function(_this) {
+        return function() {
+          _this.GL.uniform1f(_this.backgroundShaderProgram._factor, canvas.height / canvas.width);
+          _this.GL.uniform1f(_this.backgroundShaderProgram._screenRatio, SCREEN_RATIO);
+          _this.GL.uniform1i(_this.backgroundShaderProgram._sampler, 0);
+          _this.GL.bindBuffer(_this.GL.ARRAY_BUFFER, _this.backgroundSquare.triangleVertex);
+          _this.GL.vertexAttribPointer(_this.backgroundShaderProgram._position, 2, _this.GL.FLOAT, false, 4 * (2 + 0), 0);
+          _this.GL.bindBuffer(_this.GL.ELEMENT_ARRAY_BUFFER, _this.backgroundSquare.triangleFaces);
+          return _this.GL.drawElements(_this.GL.TRIANGLES, _this.backgroundSquare.triangleFacesData.length, _this.GL.UNSIGNED_SHORT, 0);
+        };
+      })(this));
+      this.shaderProgram.use((function(_this) {
+        return function() {
+          var hexagons, i, _i, _len, _ref, _results;
+          _this.GL.uniform1f(_this.shaderProgram._factor, canvas.height / canvas.width);
+          _this.GL.uniform1f(_this.shaderProgram._screenRatio, SCREEN_RATIO);
+          _this.GL.uniform1i(_this.shaderProgram._sampler, 0);
+          _ref = [_this.bigHexagons, _this.smallHexagons];
+          _results = [];
+          for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+            hexagons = _ref[i];
+            _this.GL.uniform1f(_this.shaderProgram._brightnessAdjust, (i === 0 ? -0.14 : -0.06));
+            _this.GL.bindBuffer(_this.GL.ARRAY_BUFFER, hexagons.triangleVertex);
+            _this.GL.vertexAttribPointer(_this.shaderProgram._position, 2, _this.GL.FLOAT, false, 4 * (2 + 2), 0);
+            _this.GL.vertexAttribPointer(_this.shaderProgram._texPosition, 2, _this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);
+            _this.GL.bindBuffer(_this.GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces);
+            _results.push(_this.GL.drawElements(_this.GL.TRIANGLES, hexagons.triangleFacesData.length, _this.GL.UNSIGNED_SHORT, 0));
+          }
+          return _results;
+        };
+      })(this));
+      this.bumpShaderProgram.use((function(_this) {
+        return function() {
+          _this.GL.uniform1f(_this.bumpShaderProgram._factor, canvas.height / canvas.width);
+          _this.GL.uniform1f(_this.bumpShaderProgram._screenRatio, SCREEN_RATIO);
+          _this.GL.uniform1i(_this.bumpShaderProgram._sampler, 0);
+          _this.GL.bindBuffer(_this.GL.ARRAY_BUFFER, _this.circleSegments.triangleVertex);
+          _this.GL.vertexAttribPointer(_this.bumpShaderProgram._position, 2, _this.GL.FLOAT, false, 4 * (2 + 1), 0);
+          _this.GL.vertexAttribPointer(_this.bumpShaderProgram._r, 1, _this.GL.FLOAT, false, 4 * (2 + 1), 4 * 2);
+          _this.GL.bindBuffer(_this.GL.ELEMENT_ARRAY_BUFFER, _this.circleSegments.triangleFaces);
+          return _this.GL.drawElements(_this.GL.TRIANGLES, _this.circleSegments.triangleFacesData.length, _this.GL.UNSIGNED_SHORT, 0);
+        };
+      })(this));
       this.GL.flush();
       window.requestAnimationFrame(this.draw);
     };
