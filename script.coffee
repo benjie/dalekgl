@@ -1,6 +1,7 @@
 TAN30 = Math.tan(Math.PI/6)
 OUTER_RING_RADIUS = 0.95
 INNER_RING_RADIUS = 0.7
+RING_WIDTH = 1/200
 HEXAGONS_HIGH = 55
 SCREEN_RATIO = 16/9 # 16:9 ratio
 SMALL_HEXAGONS_HIGH = 75
@@ -422,11 +423,10 @@ window.APP = APP = new class
       @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler'])
       @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
       @backgroundShaderProgram = @createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler'])
-      fiddle = 1/150
       @bigHexagons = []
-      @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity, OUTER_ZOOM_FACTOR)
+      @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR)
       @smallHexagons = []
-      @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
+      @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
       @circleSegments = []
       @initCircleSegments(@circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS)
       @initBackgroundSquare()
