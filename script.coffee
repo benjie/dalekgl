@@ -152,17 +152,30 @@ window.APP = APP = new class
     }
     """
 
+  colourAdjustmentDeclarations = """
+    vec4 tintcolor = vec4(0.1, 0.2, 1., 1.);
+    vec4 pixelColour;
+    float contrast = 1.5;
+    float brightness = 0.4;
+    """
+  colourAdjustmentCode = """
+    float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));
+    pixelColour = tintcolor * vec4(gray,gray,gray,1.0);
+    pixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;
+    pixelColour += brightness;
+    gl_FragColor = pixelColour;
+    """
+
   fragmentShaderSource: """
     precision mediump float;
     uniform sampler2D sampler;
     varying vec2 vUV;
 
-    vec4 tintcolor = vec4(0.4, 0.4, 1., 1.);
+    #{colourAdjustmentDeclarations}
 
     void main(void) {
       vec4 raw = texture2D(sampler, vUV);
-      float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));
-      gl_FragColor = tintcolor * vec4(gray,gray,gray,1.0);
+      #{colourAdjustmentCode}
     }
     """
 
@@ -193,7 +206,7 @@ window.APP = APP = new class
     varying vec2 vUV;
     varying float vR;
 
-    vec4 tintcolor = vec4(0.4, 0.4, 1., 1.);
+    #{colourAdjustmentDeclarations}
 
     void main(void) {
       vec2 uv = vUV * 2. - 1.;
@@ -201,8 +214,7 @@ window.APP = APP = new class
       uv[1] *= pow(vR, 1.3);
       uv = (uv + 1.) / 2.;
       vec4 raw = texture2D(sampler, uv);
-      float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));
-      gl_FragColor = tintcolor * vec4(gray,gray,gray,1.0);
+      #{colourAdjustmentCode}
     }
     """
 

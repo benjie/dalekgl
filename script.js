@@ -144,6 +144,8 @@
   })();
 
   window.APP = APP = new ((function() {
+    var colourAdjustmentCode, colourAdjustmentDeclarations;
+
     function _Class() {
       this.start = __bind(this.start, this);
       this.draw = __bind(this.draw, this);
@@ -156,11 +158,15 @@
 
     _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
 
-    _Class.prototype.fragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\nvec4 tintcolor = vec4(0.4, 0.4, 1., 1.);\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));\n  gl_FragColor = tintcolor * vec4(gray,gray,gray,1.0);\n}";
+    colourAdjustmentDeclarations = "vec4 tintcolor = vec4(0.1, 0.2, 1., 1.);\nvec4 pixelColour;\nfloat contrast = 1.5;\nfloat brightness = 0.4;";
+
+    colourAdjustmentCode = "float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));\npixelColour = tintcolor * vec4(gray,gray,gray,1.0);\npixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;\npixelColour += brightness;\ngl_FragColor = pixelColour;";
+
+    _Class.prototype.fragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  " + colourAdjustmentCode + "\n}";
 
     _Class.prototype.bumpVertexShaderSource = "attribute vec2 position;\nattribute float r;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\nvarying float vR;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vR = r;\n  vUV = pos2;\n}";
 
-    _Class.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nvarying float vR;\n\nvec4 tintcolor = vec4(0.4, 0.4, 1., 1.);\n\nvoid main(void) {\n  vec2 uv = vUV * 2. - 1.;\n  uv[0] *= pow(vR, 1.3);\n  uv[1] *= pow(vR, 1.3);\n  uv = (uv + 1.) / 2.;\n  vec4 raw = texture2D(sampler, uv);\n  float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));\n  gl_FragColor = tintcolor * vec4(gray,gray,gray,1.0);\n}";
+    _Class.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nvarying float vR;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec2 uv = vUV * 2. - 1.;\n  uv[0] *= pow(vR, 1.3);\n  uv[1] *= pow(vR, 1.3);\n  uv = (uv + 1.) / 2.;\n  vec4 raw = texture2D(sampler, uv);\n  " + colourAdjustmentCode + "\n}";
 
     _Class.prototype.getShader = function(type, source) {
       var shader;
