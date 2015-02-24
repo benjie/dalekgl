@@ -228,8 +228,21 @@
       return shaderProgram;
     };
 
-    _Class.prototype.initHexagons = function(hexagons, hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) {
-      var col, datum, facesData, fiddle, hexagon, highIndex, i, offsetX, offsetY, previousVerticiesCount, row, size, triangleFacesData, triangleVertexData, verticiesData, x, y, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref;
+    _Class.prototype.createVertexAndFaceBuffers = function(object, triangleVertexData, triangleFacesData) {
+      object.triangleVertexData = triangleVertexData;
+      object.triangleVertex = this.GL.createBuffer();
+      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, object.triangleVertex);
+      this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), this.GL.STATIC_DRAW);
+      object.triangleFacesData = triangleFacesData;
+      object.triangleFaces = this.GL.createBuffer();
+      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, object.triangleFaces);
+      this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), this.GL.STATIC_DRAW);
+      return object;
+    };
+
+    _Class.prototype.initHexagons = function(hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) {
+      var col, datum, facesData, fiddle, hexagon, hexagons, highIndex, i, offsetX, offsetY, previousVerticiesCount, row, size, triangleFacesData, triangleVertexData, verticiesData, x, y, _i, _j, _k, _l, _len, _len1, _len2, _m, _ref;
+      hexagons = [];
       size = 2 / (hexagonsHigh / TAN30);
       fiddle = {
         x: 3 / 10,
@@ -260,19 +273,13 @@
           triangleFacesData.push(datum);
         }
       }
-      hexagons.triangleVertexData = triangleVertexData;
-      hexagons.triangleVertex = this.GL.createBuffer();
-      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, hexagons.triangleVertex);
-      this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), this.GL.STATIC_DRAW);
-      hexagons.triangleFacesData = triangleFacesData;
-      hexagons.triangleFaces = this.GL.createBuffer();
-      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces);
-      this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), this.GL.STATIC_DRAW);
-      return true;
+      this.createVertexAndFaceBuffers(hexagons, triangleVertexData, triangleFacesData);
+      return hexagons;
     };
 
-    _Class.prototype.initCircleSegments = function(segments, segmentCount, radius) {
-      var angle, angleStep, face, faces, i, point, triangleFacesData, triangleVertexData, vertex, verticies, _i, _j, _k, _l, _len, _len1, _len2, _m;
+    _Class.prototype.initCircleSegments = function(segmentCount, radius) {
+      var angle, angleStep, face, faces, i, point, segments, triangleFacesData, triangleVertexData, vertex, verticies, _i, _j, _k, _l, _len, _len1, _len2, _m;
+      segments = {};
       angleStep = 2 * Math.PI / segmentCount;
       angle = 0;
       verticies = [[0, 0]];
@@ -299,15 +306,8 @@
           triangleFacesData.push(point);
         }
       }
-      segments.triangleVertexData = triangleVertexData;
-      segments.triangleVertex = this.GL.createBuffer();
-      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, segments.triangleVertex);
-      this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), this.GL.STATIC_DRAW);
-      segments.triangleFacesData = triangleFacesData;
-      segments.triangleFaces = this.GL.createBuffer();
-      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, segments.triangleFaces);
-      this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), this.GL.STATIC_DRAW);
-      return true;
+      this.createVertexAndFaceBuffers(segments, triangleVertexData, triangleFacesData);
+      return segments;
     };
 
     _Class.prototype.initBackgroundSquare = function() {
@@ -315,15 +315,7 @@
       square = {};
       triangleVertexData = [-1, -1, 1, -1, 1, 1, -1, 1];
       triangleFacesData = [0, 1, 2, 0, 2, 3];
-      square.triangleVertexData = triangleVertexData;
-      square.triangleVertex = this.GL.createBuffer();
-      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, square.triangleVertex);
-      this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), this.GL.STATIC_DRAW);
-      square.triangleFacesData = triangleFacesData;
-      square.triangleFaces = this.GL.createBuffer();
-      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, square.triangleFaces);
-      this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), this.GL.STATIC_DRAW);
-      this.backgroundSquare = square;
+      this.createVertexAndFaceBuffers(square, triangleVertexData, triangleFacesData);
     };
 
     _Class.prototype.initTexture = function() {
@@ -345,13 +337,10 @@
         this.shaderProgram = this.createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust']);
         this.bumpShaderProgram = this.createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler']);
         this.backgroundShaderProgram = this.createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler']);
-        this.bigHexagons = [];
-        this.initHexagons(this.bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR);
-        this.smallHexagons = [];
-        this.initHexagons(this.smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR);
-        this.circleSegments = [];
-        this.initCircleSegments(this.circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS);
-        this.initBackgroundSquare();
+        this.bigHexagons = this.initHexagons(HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR);
+        this.smallHexagons = this.initHexagons(SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR);
+        this.circleSegments = this.initCircleSegments(CIRCLE_SEGMENTS, INNER_RING_RADIUS);
+        this.backgroundSquare = this.initBackgroundSquare();
         this.initTexture();
         this.image = document.getElementsByTagName('img')[0];
         this.video = document.getElementsByTagName('video')[0];

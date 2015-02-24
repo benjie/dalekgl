@@ -303,8 +303,20 @@ window.APP = APP = new class
 
     return shaderProgram
 
-  initHexagons: (hexagons, hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) ->
+  createVertexAndFaceBuffers: (object, triangleVertexData, triangleFacesData) ->
+    object.triangleVertexData = triangleVertexData
+    object.triangleVertex = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ARRAY_BUFFER, object.triangleVertex)
+    @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
 
+    object.triangleFacesData = triangleFacesData
+    object.triangleFaces = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, object.triangleFaces)
+    @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
+    return object
+
+  initHexagons: (hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) ->
+    hexagons = []
     size = 2 / (hexagonsHigh / TAN30)
     fiddle =
       x: 3/10
@@ -330,19 +342,11 @@ window.APP = APP = new class
       triangleVertexData.push datum for datum in verticiesData
       triangleFacesData.push datum for datum in facesData
 
-    hexagons.triangleVertexData = triangleVertexData
-    hexagons.triangleVertex = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
-    @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
+    @createVertexAndFaceBuffers(hexagons, triangleVertexData, triangleFacesData)
+    return hexagons
 
-    hexagons.triangleFacesData = triangleFacesData
-    hexagons.triangleFaces = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
-    @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
-
-    return true
-
-  initCircleSegments: (segments, segmentCount, radius) ->
+  initCircleSegments: (segmentCount, radius) ->
+    segments = {}
     angleStep = 2 * Math.PI / segmentCount
     angle = 0
     verticies = [[0, 0]]
@@ -367,17 +371,8 @@ window.APP = APP = new class
       for point in face
         triangleFacesData.push point
 
-    segments.triangleVertexData = triangleVertexData
-    segments.triangleVertex = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ARRAY_BUFFER, segments.triangleVertex)
-    @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
-
-    segments.triangleFacesData = triangleFacesData
-    segments.triangleFaces = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, segments.triangleFaces)
-    @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
-
-    return true
+    @createVertexAndFaceBuffers(segments, triangleVertexData, triangleFacesData)
+    return segments
 
   initBackgroundSquare: ->
     square = {}
@@ -392,17 +387,7 @@ window.APP = APP = new class
       0, 2, 3
     ]
 
-    square.triangleVertexData = triangleVertexData
-    square.triangleVertex = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ARRAY_BUFFER, square.triangleVertex)
-    @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
-
-    square.triangleFacesData = triangleFacesData
-    square.triangleFaces = @GL.createBuffer()
-    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, square.triangleFaces)
-    @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
-
-    @backgroundSquare = square
+    @createVertexAndFaceBuffers(square, triangleVertexData, triangleFacesData)
     return
 
   initTexture: ->
@@ -425,13 +410,10 @@ window.APP = APP = new class
       @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust'])
       @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
       @backgroundShaderProgram = @createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler'])
-      @bigHexagons = []
-      @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR)
-      @smallHexagons = []
-      @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
-      @circleSegments = []
-      @initCircleSegments(@circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS)
-      @initBackgroundSquare()
+      @bigHexagons = @initHexagons(HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR)
+      @smallHexagons = @initHexagons(SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
+      @circleSegments = @initCircleSegments(CIRCLE_SEGMENTS, INNER_RING_RADIUS)
+      @backgroundSquare = @initBackgroundSquare()
       @initTexture()
       @image = document.getElementsByTagName('img')[0]
       @video = document.getElementsByTagName('video')[0]
