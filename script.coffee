@@ -133,6 +133,25 @@ window.APP = APP = new class
   VERTEX: 2
   FRAGMENT: 3
 
+  colourAdjustmentDeclarations = """
+    vec4 pixelColour;
+    float contrast = 0.8;
+    float brightness = 0.15;
+    """
+
+  colourAdjustmentCode = """
+    pixelColour = raw;
+    pixelColour += brightness;
+    pixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;
+    pixelColour.x /= 2.;
+    pixelColour.x -= 0.3;
+    pixelColour.y -= 0.15;
+    pixelColour.z *= 0.55;
+    pixelColour.z += 0.45;
+
+    gl_FragColor = pixelColour;
+    """
+
   vertexShaderSource: """
     attribute vec2 position;
     attribute vec2 texPosition;
@@ -150,24 +169,6 @@ window.APP = APP = new class
       pos2 = pos2 / 2.;
       vUV = pos2;
     }
-    """
-
-  colourAdjustmentDeclarations = """
-    vec4 pixelColour;
-    float contrast = 0.8;
-    float brightness = 0.15;
-    """
-  colourAdjustmentCode = """
-    pixelColour = raw;
-    pixelColour += brightness;
-    pixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;
-    pixelColour.x /= 2.;
-    pixelColour.x -= 0.3;
-    pixelColour.y -= 0.15;
-    pixelColour.z *= 0.55;
-    pixelColour.z += 0.45;
-
-    gl_FragColor = pixelColour;
     """
 
   fragmentShaderSource: """
