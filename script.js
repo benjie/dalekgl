@@ -46,87 +46,90 @@
     }
 
     Hexagon.prototype.data = function(n) {
-      var colours, edgeLength, face, faces, facesData, hexHeight, i, inside, isInside, j, k, moveVertexToward, other, point, px, py, r, target, vertex, vertexIndex, verticies, verticiesData, x, y, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _m, _n, _o, _p, _ref, _ref1;
+      var bestGuess, colours, edgeLength, face, faces, facesData, fullyInside, fullyOutside, goodVerticies, hexHeight, i, isInside, maxR, minR, point, previousVertex, px, py, r, vertex, verticies, verticiesData, x, y, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref;
       edgeLength = this.size;
       hexHeight = edgeLength / TAN30;
       verticies = [[this.x - edgeLength / 2, this.y + hexHeight / 2], [this.x + edgeLength / 2, this.y + hexHeight / 2], [this.x + edgeLength, this.y], [this.x + edgeLength / 2, this.y - hexHeight / 2], [this.x - edgeLength / 2, this.y - hexHeight / 2], [this.x - edgeLength, this.y]];
       faces = [[1, 4, 2], [2, 4, 3], [1, 5, 4], [1, 6, 5]];
+      fullyInside = true;
+      fullyOutside = true;
       for (_i = 0, _len = verticies.length; _i < _len; _i++) {
         vertex = verticies[_i];
         r = distanceFromCenter(vertex);
         isInside = (this.minRadius <= r && r <= this.maxRadius);
         vertex.push(isInside);
+        fullyInside = fullyInside && isInside;
+        fullyOutside = fullyOutside && !isInside;
       }
-      moveVertexToward = function(vertex, otherVertex, minR, maxR) {
-        var badBound, goodBound, guess, i, moveToward, _j, _ref;
-        guess = vertex.slice();
-        badBound = vertex;
-        goodBound = otherVertex;
-        moveToward = function(v) {
-          guess[0] = (guess[0] + v[0]) / 2;
-          guess[1] = (guess[1] + v[1]) / 2;
+      if (fullyOutside) {
+        verticies = [];
+        faces = [];
+      } else if (fullyInside) {
+
+      } else {
+        minR = this.minRadius;
+        maxR = this.maxRadius;
+        bestGuess = function(vertex, otherVertex) {
+          var badBound, goodBound, guess, i, moveToward, _j, _ref, _ref1, _ref2;
+          if ((minR <= (_ref = distanceFromCenter(vertex)) && _ref <= maxR)) {
+            _ref1 = [vertex, otherVertex], otherVertex = _ref1[0], vertex = _ref1[1];
+          }
+          guess = vertex.slice();
+          badBound = vertex.slice();
+          goodBound = otherVertex.slice();
+          moveToward = function(v) {
+            guess[0] = (guess[0] + v[0]) / 2;
+            guess[1] = (guess[1] + v[1]) / 2;
+          };
+          moveToward(goodBound);
+          for (i = _j = 0; _j <= 5; i = ++_j) {
+            if ((minR <= (_ref2 = distanceFromCenter(guess)) && _ref2 <= maxR)) {
+              goodBound = guess.slice();
+              moveToward(badBound);
+            } else {
+              badBound = guess.slice();
+              moveToward(goodBound);
+            }
+          }
+          return guess;
         };
-        moveToward(goodBound);
-        for (i = _j = 0; _j <= 5; i = ++_j) {
-          if ((minR <= (_ref = distanceFromCenter(guess)) && _ref <= maxR)) {
-            goodBound = guess;
-            moveToward(badBound);
-          } else {
-            badBound = guess;
-            moveToward(goodBound);
+        goodVerticies = [];
+        previousVertex = verticies[5];
+        for (_j = 0, _len1 = verticies.length; _j < _len1; _j++) {
+          vertex = verticies[_j];
+          if (previousVertex[2] !== vertex[2]) {
+            goodVerticies.push(bestGuess(vertex, previousVertex));
           }
-        }
-        vertex[0] = guess[0];
-        vertex[1] = guess[1];
-      };
-      for (i = _j = 0, _len1 = verticies.length; _j < _len1; i = ++_j) {
-        vertex = verticies[i];
-        if (!(vertex[2] === false)) {
-          continue;
-        }
-        target = vertex;
-        _ref = [1, 5, 2, 4, 3];
-        for (k = _k = 0, _len2 = _ref.length; _k < _len2; k = ++_k) {
-          j = _ref[k];
-          other = verticies[(i + j) % 6];
-          if (other[2]) {
-            vertex[0] = target[0];
-            vertex[1] = target[1];
-            moveVertexToward(vertex, other, this.minRadius, this.maxRadius);
-            break;
+          if (vertex[2]) {
+            goodVerticies.push(vertex);
           }
-          if (k % 2 === 1) {
-            target = other;
+          previousVertex = vertex;
+        }
+        verticies = goodVerticies;
+        faces = (function() {
+          var _k, _ref, _results;
+          _results = [];
+          for (i = _k = 2, _ref = verticies.length; 2 <= _ref ? _k < _ref : _k > _ref; i = 2 <= _ref ? ++_k : --_k) {
+            _results.push([1, i, i + 1]);
           }
-        }
-      }
-      for (i = _l = faces.length - 1; _l >= 0; i = _l += -1) {
-        face = faces[i];
-        inside = false;
-        for (_m = 0, _len3 = face.length; _m < _len3; _m++) {
-          vertexIndex = face[_m];
-          vertex = verticies[vertexIndex - 1];
-          inside || (inside = vertex[2]);
-        }
-        if (!inside) {
-          faces.splice(i, 1);
-        }
+          return _results;
+        })();
       }
       facesData = [];
       verticiesData = [];
       if (faces.length > 0) {
-        for (_n = 0, _len4 = faces.length; _n < _len4; _n++) {
-          face = faces[_n];
-          for (_o = 0, _len5 = face.length; _o < _len5; _o++) {
-            point = face[_o];
+        for (_k = 0, _len2 = faces.length; _k < _len2; _k++) {
+          face = faces[_k];
+          for (_l = 0, _len3 = face.length; _l < _len3; _l++) {
+            point = face[_l];
             facesData.push(point - 1 + n);
           }
         }
         colours = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [1, 0, 1], [0, 1, 1]];
         px = this.x / this.zoomFactor;
         py = this.y / this.zoomFactor;
-        for (i = _p = 0, _len6 = verticies.length; _p < _len6; i = ++_p) {
-          _ref1 = verticies[i], x = _ref1[0], y = _ref1[1];
+        for (i = _m = 0, _len4 = verticies.length; _m < _len4; i = ++_m) {
+          _ref = verticies[i], x = _ref[0], y = _ref[1];
           verticiesData.push(x);
           verticiesData.push(y);
           verticiesData.push(px);

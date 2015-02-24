@@ -47,59 +47,62 @@ class Hexagon
 
     # ==================================================
     # Filtering
+    fullyInside = true
+    fullyOutside = true
 
     for vertex in verticies
       r = distanceFromCenter(vertex)
       isInside = (@minRadius <= r <= @maxRadius)
       vertex.push isInside
+      fullyInside = fullyInside && isInside
+      fullyOutside = fullyOutside && !isInside
 
-    moveVertexToward = (vertex, otherVertex, minR, maxR) ->
-      # find the point along the line previousVertex..vertex where r hits the edge
-      guess = vertex.slice()
-      badBound = vertex
-      goodBound = otherVertex
+    if fullyOutside
+      verticies = []
+      faces = []
+    else if fullyInside
+      # Noop
+    else
 
-      moveToward = (v) ->
-        guess[0] = (guess[0] + v[0]) / 2
-        guess[1] = (guess[1] + v[1]) / 2
-        return
+      minR = @minRadius
+      maxR = @maxRadius
+      bestGuess = (vertex, otherVertex) ->
+        # find the point along the line previousVertex..vertex where r hits the edge
+        if minR <= distanceFromCenter(vertex) <= maxR
+          # Vertex must be the OOB vertex
+          [otherVertex, vertex] = [vertex, otherVertex]
+        guess = vertex.slice()
+        badBound = vertex.slice()
+        goodBound = otherVertex.slice()
 
-      moveToward(goodBound)
+        moveToward = (v) ->
+          guess[0] = (guess[0] + v[0]) / 2
+          guess[1] = (guess[1] + v[1]) / 2
+          return
 
-      for i in [0..5]
-        if minR <= distanceFromCenter(guess) <= maxR
-          goodBound = guess
-          moveToward badBound
-        else
-          badBound = guess
-          moveToward goodBound
-      vertex[0] = guess[0]
-      vertex[1] = guess[1]
-      return
+        moveToward(goodBound)
 
-    for vertex, i in verticies when vertex[2] is false
-      # XXX: THIS CODE IS WONKY, FIX IT!
-      #
-      # Aim is to move any out of bounds verticies so that they're just inside the bounds
-      target = vertex
-      for j, k in [1, 5, 2, 4, 3]
-        other = verticies[(i + j) % 6]
-        if other[2]
-          vertex[0] = target[0]
-          vertex[1] = target[1]
-          moveVertexToward(vertex, other, @minRadius, @maxRadius)
-          break
-        if k % 2 == 1
-          target = other
+        for i in [0..5]
+          if minR <= distanceFromCenter(guess) <= maxR
+            goodBound = guess.slice()
+            moveToward badBound
+          else
+            badBound = guess.slice()
+            moveToward goodBound
+        return guess
 
-    for face, i in faces by -1
-      inside = false
-      for vertexIndex in face
-        vertex = verticies[vertexIndex-1]
-        inside ||= vertex[2]
-      unless inside
-        faces.splice(i, 1)
+      goodVerticies = []
+      previousVertex = verticies[5]
+      for vertex in verticies
+        if previousVertex[2] isnt vertex[2]
+          # One of them is outside
+          goodVerticies.push bestGuess(vertex, previousVertex)
+        if vertex[2]
+          goodVerticies.push vertex
+        previousVertex = vertex
 
+      verticies = goodVerticies
+      faces = ([1, i, i+1] for i in [2...verticies.length])
 
 
     # ==================================================
