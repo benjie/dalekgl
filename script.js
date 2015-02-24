@@ -334,6 +334,7 @@
         this.circleSegments = [];
         this.initCircleSegments(this.circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS);
         this.initTexture();
+        this.image = document.getElementsByTagName('img')[0];
         this.video = document.getElementsByTagName('video')[0];
         this.GL.clearColor(0.0, 0.0, 0.0, 0.0);
         return true;
@@ -346,7 +347,7 @@
     };
 
     _Class.prototype.draw = function() {
-      var hexagons, _i, _len, _ref;
+      var hexagons, textureSource, _i, _len, _ref;
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
       this.GL.useProgram(this.shaderProgram);
@@ -354,7 +355,8 @@
       this.GL.uniform1f(this._screenRatio, SCREEN_RATIO);
       this.GL.uniform1i(this._sampler, 0);
       this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
-      this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, this.video);
+      textureSource = this.video.loaded ? this.video : this.image;
+      this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, textureSource);
       _ref = [this.bigHexagons, this.smallHexagons];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         hexagons = _ref[_i];
@@ -377,12 +379,13 @@
     };
 
     _Class.prototype.run = function() {
+      this.draw();
       return navigator.webkitGetUserMedia({
         video: true
       }, (function(_this) {
         return function(localMediaStream) {
           _this.video.src = window.URL.createObjectURL(localMediaStream);
-          return _this.draw();
+          return _this.video.loaded = true;
         };
       })(this), function() {
         return alert("GUM fail.");

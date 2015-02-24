@@ -368,6 +368,7 @@ window.APP = APP = new class
       @circleSegments = []
       @initCircleSegments(@circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS)
       @initTexture()
+      @image = document.getElementsByTagName('img')[0]
       @video = document.getElementsByTagName('video')[0]
       @GL.clearColor(0.0, 0.0, 0.0, 0.0)
       return true
@@ -386,7 +387,12 @@ window.APP = APP = new class
     @GL.uniform1i(@_sampler, 0)
 
     @GL.bindTexture(@GL.TEXTURE_2D, @texture)
-    @GL.texImage2D(@GL.TEXTURE_2D, 0, @GL.RGBA, @GL.RGBA, @GL.UNSIGNED_BYTE, @video)
+    textureSource =
+      if @video.loaded
+        @video
+      else
+        @image
+    @GL.texImage2D(@GL.TEXTURE_2D, 0, @GL.RGBA, @GL.RGBA, @GL.UNSIGNED_BYTE, textureSource)
 
     for hexagons in [@bigHexagons, @smallHexagons]
       @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
@@ -412,9 +418,10 @@ window.APP = APP = new class
     return
 
   run: ->
+    @draw()
     navigator.webkitGetUserMedia {video: true}, (localMediaStream) =>
       @video.src = window.URL.createObjectURL(localMediaStream)
-      @draw()
+      @video.loaded = true
     , -> alert("GUM fail.")
 
   start: =>
