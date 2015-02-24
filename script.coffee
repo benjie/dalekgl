@@ -153,16 +153,20 @@ window.APP = APP = new class
     """
 
   colourAdjustmentDeclarations = """
-    vec4 tintcolor = vec4(0.1, 0.2, 1., 1.);
     vec4 pixelColour;
-    float contrast = 1.5;
-    float brightness = 0.4;
+    float contrast = 0.8;
+    float brightness = 0.15;
     """
   colourAdjustmentCode = """
-    float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));
-    pixelColour = tintcolor * vec4(gray,gray,gray,1.0);
-    pixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;
+    pixelColour = raw;
     pixelColour += brightness;
+    pixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;
+    pixelColour.x /= 2.;
+    pixelColour.x -= 0.3;
+    pixelColour.y -= 0.15;
+    pixelColour.z *= 0.55;
+    pixelColour.z += 0.45;
+
     gl_FragColor = pixelColour;
     """
 
