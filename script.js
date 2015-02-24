@@ -382,7 +382,7 @@
       this.GL.uniform1f(this.shaderProgram._screenRatio, SCREEN_RATIO);
       this.GL.uniform1i(this.shaderProgram._sampler, 0);
       this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
-      textureSource = this.video.loaded ? this.video : this.image;
+      textureSource = this.video.loaded && !this.video.paused ? this.video : this.image;
       this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, textureSource);
       _ref = [this.bigHexagons, this.smallHexagons];
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {

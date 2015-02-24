@@ -463,7 +463,7 @@ window.APP = APP = new class
 
     @GL.bindTexture(@GL.TEXTURE_2D, @texture)
     textureSource =
-      if @video.loaded
+      if @video.loaded and !@video.paused
         @video
       else
         @image
