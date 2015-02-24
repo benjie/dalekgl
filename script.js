@@ -563,12 +563,30 @@
 
     _Class.prototype.run = function() {
       this.draw();
-      return navigator.webkitGetUserMedia({
+      navigator.getUserMedia || (navigator.getUserMedia = navigator.webkitGetUserMedia);
+      navigator.getUserMedia || (navigator.getUserMedia = navigator.mozGetUserMedia);
+      navigator.getUserMedia || (navigator.getUserMedia = navigator.msGetUserMedia);
+      if (window.URL == null) {
+        window.URL = window.webkitURL;
+      }
+      if (window.URL == null) {
+        window.URL = window.mozURL;
+      }
+      if (window.URL == null) {
+        window.URL = window.msURL;
+      }
+      return navigator.getUserMedia({
         video: true
       }, (function(_this) {
         return function(localMediaStream) {
-          _this.video.src = window.URL.createObjectURL(localMediaStream);
-          return _this.video.loaded = true;
+          var _ref, _ref1;
+          if (_this.video.mozSrcObject !== void 0) {
+            _this.video.mozSrcObject = localMediaStream;
+          } else {
+            _this.video.src = (_ref = (_ref1 = window.URL) != null ? _ref1.createObjectURL(localMediaStream) : void 0) != null ? _ref : localMediaStream;
+          }
+          _this.video.loaded = true;
+          return _this.video.play();
         };
       })(this), function() {
         return alert("GUM fail.");

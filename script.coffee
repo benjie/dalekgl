@@ -620,9 +620,20 @@ window.APP = APP = new class
 
   run: ->
     @draw()
-    navigator.webkitGetUserMedia {video: true}, (localMediaStream) =>
-      @video.src = window.URL.createObjectURL(localMediaStream)
+    navigator.getUserMedia ||= navigator.webkitGetUserMedia
+    navigator.getUserMedia ||= navigator.mozGetUserMedia
+    navigator.getUserMedia ||= navigator.msGetUserMedia
+    window.URL ?= window.webkitURL
+    window.URL ?= window.mozURL
+    window.URL ?= window.msURL
+
+    navigator.getUserMedia {video: true}, (localMediaStream) =>
+      if @video.mozSrcObject isnt undefined
+        @video.mozSrcObject = localMediaStream
+      else
+        @video.src = window.URL?.createObjectURL(localMediaStream) ? localMediaStream
       @video.loaded = true
+      @video.play()
     , -> alert("GUM fail.")
 
   start: =>
