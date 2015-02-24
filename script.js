@@ -156,13 +156,13 @@
 
     _Class.prototype.FRAGMENT = 3;
 
-    _Class.prototype.vertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
-
     colourAdjustmentDeclarations = "vec4 pixelColour;\nfloat contrast = 0.8;\nfloat brightness = 0.15;";
 
     colourAdjustmentCode = "pixelColour = raw;\npixelColour += brightness;\npixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;\npixelColour.x /= 2.;\npixelColour.x -= 0.3;\npixelColour.y -= 0.15;\npixelColour.z *= 0.55;\npixelColour.z += 0.45;\n\ngl_FragColor = pixelColour;";
 
-    _Class.prototype.fragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  " + colourAdjustmentCode + "\n}";
+    _Class.prototype.hexagonVertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
+
+    _Class.prototype.hexagonFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  " + colourAdjustmentCode + "\n}";
 
     _Class.prototype.bumpVertexShaderSource = "attribute vec2 position;\nattribute float r;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\nvarying float vR;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vR = r;\n  vUV = pos2;\n}";
 
@@ -199,40 +199,33 @@
       return true;
     };
 
-    _Class.prototype.initShaders = function() {
-      var fragmentShader, shaderProgram, vertexShader;
-      vertexShader = this.getShader(this.GL.VERTEX_SHADER, this.vertexShaderSource);
-      fragmentShader = this.getShader(this.GL.FRAGMENT_SHADER, this.fragmentShaderSource);
+    _Class.prototype.createNamedShader = function(name, attributes, uniforms) {
+      var fragmentShader, shaderProgram, varName, vertexShader, _i, _j, _len, _len1;
+      vertexShader = this.getShader(this.GL.VERTEX_SHADER, this["" + name + "VertexShaderSource"]);
+      fragmentShader = this.getShader(this.GL.FRAGMENT_SHADER, this["" + name + "FragmentShaderSource"]);
       shaderProgram = this.GL.createProgram();
       this.GL.attachShader(shaderProgram, vertexShader);
       this.GL.attachShader(shaderProgram, fragmentShader);
       this.GL.linkProgram(shaderProgram);
-      this.shaderProgram = shaderProgram;
-      this.shaderProgram._position = this.GL.getAttribLocation(shaderProgram, "position");
-      this.shaderProgram._texPosition = this.GL.getAttribLocation(shaderProgram, "texPosition");
-      this.shaderProgram._factor = this.GL.getUniformLocation(shaderProgram, "factor");
-      this.shaderProgram._screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
-      this.shaderProgram._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
-      this.GL.enableVertexAttribArray(this.shaderProgram._position);
-      this.GL.enableVertexAttribArray(this.shaderProgram._texPosition);
+      for (_i = 0, _len = attributes.length; _i < _len; _i++) {
+        varName = attributes[_i];
+        shaderProgram["_" + varName] = this.GL.getAttribLocation(shaderProgram, varName);
+        this.GL.enableVertexAttribArray(shaderProgram["_" + varName]);
+      }
+      for (_j = 0, _len1 = uniforms.length; _j < _len1; _j++) {
+        varName = uniforms[_j];
+        shaderProgram["_" + varName] = this.GL.getUniformLocation(shaderProgram, varName);
+      }
+      return shaderProgram;
+    };
+
+    _Class.prototype.initShaders = function() {
+      this.shaderProgram = this.createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler']);
       return true;
     };
 
     _Class.prototype.initBumpShaders = function() {
-      var fragmentShader, shaderProgram, vertexShader;
-      vertexShader = this.getShader(this.GL.VERTEX_SHADER, this.bumpVertexShaderSource);
-      fragmentShader = this.getShader(this.GL.FRAGMENT_SHADER, this.bumpFragmentShaderSource);
-      shaderProgram = this.GL.createProgram();
-      this.GL.attachShader(shaderProgram, vertexShader);
-      this.GL.attachShader(shaderProgram, fragmentShader);
-      this.GL.linkProgram(shaderProgram);
-      this.bumpShaderProgram = shaderProgram;
-      this.bumpShaderProgram._position = this.GL.getAttribLocation(shaderProgram, "position");
-      this.bumpShaderProgram._r = this.GL.getAttribLocation(shaderProgram, "r");
-      this.bumpShaderProgram._factor = this.GL.getUniformLocation(shaderProgram, "factor");
-      this.bumpShaderProgram._screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
-      this.bumpShaderProgram._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
-      this.GL.enableVertexAttribArray(this.bumpShaderProgram._position);
+      this.bumpShaderProgram = this.createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler']);
       return true;
     };
 

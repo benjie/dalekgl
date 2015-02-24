@@ -152,7 +152,7 @@ window.APP = APP = new class
     gl_FragColor = pixelColour;
     """
 
-  vertexShaderSource: """
+  hexagonVertexShaderSource: """
     attribute vec2 position;
     attribute vec2 texPosition;
     uniform float factor;
@@ -171,7 +171,7 @@ window.APP = APP = new class
     }
     """
 
-  fragmentShaderSource: """
+  hexagonFragmentShaderSource: """
     precision mediump float;
     uniform sampler2D sampler;
     varying vec2 vUV;
@@ -247,43 +247,29 @@ window.APP = APP = new class
     @GL = @canvas.getContext("experimental-webgl", {antialias: true})
     return true
 
-  initShaders: ->
-    vertexShader = @getShader(@GL.VERTEX_SHADER, @vertexShaderSource)
-    fragmentShader = @getShader(@GL.FRAGMENT_SHADER, @fragmentShaderSource)
+  createNamedShader: (name, attributes, uniforms) ->
+    vertexShader = @getShader(@GL.VERTEX_SHADER, this["#{name}VertexShaderSource"])
+    fragmentShader = @getShader(@GL.FRAGMENT_SHADER, this["#{name}FragmentShaderSource"])
     shaderProgram = @GL.createProgram()
     @GL.attachShader(shaderProgram, vertexShader)
     @GL.attachShader(shaderProgram, fragmentShader)
     @GL.linkProgram(shaderProgram)
 
-    @shaderProgram = shaderProgram
-    @shaderProgram._position = @GL.getAttribLocation(shaderProgram, "position")
-    @shaderProgram._texPosition = @GL.getAttribLocation(shaderProgram, "texPosition")
-    @shaderProgram._factor = @GL.getUniformLocation(shaderProgram, "factor")
-    @shaderProgram._screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
-    @shaderProgram._sampler = @GL.getUniformLocation(shaderProgram, "sampler")
+    for varName in attributes
+      shaderProgram["_#{varName}"] = @GL.getAttribLocation(shaderProgram, varName)
+      @GL.enableVertexAttribArray(shaderProgram["_#{varName}"])
 
-    @GL.enableVertexAttribArray(@shaderProgram._position)
-    @GL.enableVertexAttribArray(@shaderProgram._texPosition)
+    for varName in uniforms
+      shaderProgram["_#{varName}"] = @GL.getUniformLocation(shaderProgram, varName)
 
+    return shaderProgram
+
+  initShaders: ->
+    @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler'])
     return true
 
   initBumpShaders: ->
-    vertexShader = @getShader(@GL.VERTEX_SHADER, @bumpVertexShaderSource)
-    fragmentShader = @getShader(@GL.FRAGMENT_SHADER, @bumpFragmentShaderSource)
-    shaderProgram = @GL.createProgram()
-    @GL.attachShader(shaderProgram, vertexShader)
-    @GL.attachShader(shaderProgram, fragmentShader)
-    @GL.linkProgram(shaderProgram)
-
-    @bumpShaderProgram = shaderProgram
-    @bumpShaderProgram._position = @GL.getAttribLocation(shaderProgram, "position")
-    @bumpShaderProgram._r = @GL.getAttribLocation(shaderProgram, "r")
-    @bumpShaderProgram._factor = @GL.getUniformLocation(shaderProgram, "factor")
-    @bumpShaderProgram._screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
-    @bumpShaderProgram._sampler = @GL.getUniformLocation(shaderProgram, "sampler")
-
-    @GL.enableVertexAttribArray(@bumpShaderProgram._position)
-
+    @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
     return true
 
   initHexagons: (hexagons, hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) ->
