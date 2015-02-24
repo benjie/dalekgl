@@ -7,6 +7,7 @@ SMALL_HEXAGONS_HIGH = 75
 CIRCLE_SEGMENTS = 32
 OUTER_ZOOM_FACTOR = 1.12
 INNER_ZOOM_FACTOR = 1.05
+INNER_BUMP_R = 0.7
 
 distanceFromCenter = (v) ->
   (v[0] ** 2 + v[1] ** 2) ** 0.5
@@ -167,10 +168,11 @@ window.APP = APP = new class
 
   bumpVertexShaderSource: """
     attribute vec2 position;
+    attribute float r;
     uniform float factor;
     uniform float screenRatio;
     varying vec2 vUV;
-    varying float r;
+    varying float vR;
 
     void main(void) {
       vec2 pos = position;
@@ -180,7 +182,7 @@ window.APP = APP = new class
       pos2.x /= screenRatio;
       pos2 = pos2 + 1.;
       pos2 = pos2 / 2.;
-      r = position[0] == position[1] && position[0] == 0. ? 0.7 : 1.;
+      vR = r;
       vUV = pos2;
     }
     """
@@ -189,14 +191,14 @@ window.APP = APP = new class
     precision mediump float;
     uniform sampler2D sampler;
     varying vec2 vUV;
-    varying float r;
+    varying float vR;
 
     vec4 tintcolor = vec4(0.4, 0.4, 1., 1.);
 
     void main(void) {
       vec2 uv = vUV * 2. - 1.;
-      uv[0] *= pow(r, 1.3);
-      uv[1] *= pow(r, 1.3);
+      uv[0] *= pow(vR, 1.3);
+      uv[1] *= pow(vR, 1.3);
       uv = (uv + 1.) / 2.;
       vec4 raw = texture2D(sampler, uv);
       float gray = dot(vec3(raw[0], raw[1], raw[2]), vec3(0.3, 0.59, 0.11));
@@ -258,6 +260,7 @@ window.APP = APP = new class
 
     @bumpShaderProgram = shaderProgram
     @_2position = @GL.getAttribLocation(shaderProgram, "position")
+    @_2r = @GL.getAttribLocation(shaderProgram, "r")
     @_2factor = @GL.getUniformLocation(shaderProgram, "factor")
     @_2screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
     @_2sampler = @GL.getUniformLocation(shaderProgram, "sampler")
@@ -323,6 +326,7 @@ window.APP = APP = new class
     for vertex, i in verticies
       triangleVertexData.push vertex[0]
       triangleVertexData.push vertex[1]
+      triangleVertexData.push (if i is 0 then INNER_BUMP_R else 1)
 
     triangleFacesData = []
     for face in faces
@@ -407,7 +411,8 @@ window.APP = APP = new class
     @GL.uniform1f(@_2screenRatio, SCREEN_RATIO)
     @GL.uniform1i(@_2sampler, 0)
     @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
-    @GL.vertexAttribPointer(@_2position, 2, @GL.FLOAT, false, 4*(2+0), 0)
+    @GL.vertexAttribPointer(@_2position, 2, @GL.FLOAT, false, 4*(2+1), 0)
+    @GL.vertexAttribPointer(@_2r, 1, @GL.FLOAT, false, 4*(2+1), 4*2)
 
     @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
     @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
