@@ -13,6 +13,51 @@ INNER_BUMP_R = 0.7
 distanceFromCenter = (v) ->
   (v[0] ** 2 + v[1] ** 2) ** 0.5
 
+class Decal
+  ###
+   4___A___1  bigR
+    |  N  |
+    |  G  |
+    |  L  |
+    |__E__|
+   3       2  littleR
+  ###
+  constructor: (@r, @angle, @large) ->
+
+  data: (n) ->
+    smallAngle = Math.PI / 1500
+    factor = 1/10
+    if @large
+      smallAngle *= 2
+      factor *= 2
+    bigR = @r
+    smallR = @r - (OUTER_RING_RADIUS - INNER_RING_RADIUS) * factor
+    verticies = [
+      [bigR * Math.sin(@angle + smallAngle), bigR * Math.cos(@angle + smallAngle)]
+      [smallR * Math.sin(@angle + smallAngle), smallR * Math.cos(@angle + smallAngle)]
+      [smallR * Math.sin(@angle - smallAngle), smallR * Math.cos(@angle - smallAngle)]
+      [bigR * Math.sin(@angle - smallAngle), bigR * Math.cos(@angle - smallAngle)]
+    ]
+
+    faces = [
+      [1, 2, 3]
+      [1, 3, 4]
+    ]
+
+    # ==================================================
+    # Output
+
+    facesData = []
+    verticiesData = []
+    for face in faces
+      for point in face
+        facesData.push point - 1 + n
+
+    for [x, y], i in verticies
+      verticiesData.push x
+      verticiesData.push y
+    return verticiesData: verticiesData, facesData: facesData
+
 class Hexagon
   ###
      1 ____ 2
@@ -116,14 +161,6 @@ class Hexagon
         for point in face
           facesData.push point - 1 + n
 
-      colours = [
-        [1, 0, 0]
-        [0, 1, 0]
-        [0, 0, 1]
-        [1, 1, 0]
-        [1, 0, 1]
-        [0, 1, 1]
-      ]
       px = @x / @zoomFactor
       py = @y / @zoomFactor
       for [x, y], i in verticies
@@ -259,6 +296,27 @@ window.APP = APP = new class
       raw = vec4(vec3(raw) - darkenAmount, 1.);
       #{colourAdjustmentCode}
       gl_FragColor = vec4(pixelColour, 1.);
+    }
+    """
+
+  decalVertexShaderSource: """
+    attribute vec2 position;
+    uniform float factor;
+    uniform float screenRatio;
+    uniform float angle;
+
+    void main(void) {
+      vec2 pos = position;
+      pos.x *= factor;
+      gl_Position = vec4(pos, 0., 1.);
+    }
+    """
+
+  decalFragmentShaderSource: """
+    precision mediump float;
+
+    void main(void) {
+      gl_FragColor = vec4(0.4, 0.7, 1., 0.2);
     }
     """
 
@@ -398,6 +456,43 @@ window.APP = APP = new class
     @createVertexAndFaceBuffers(square, triangleVertexData, triangleFacesData)
     return square
 
+  initDecals: (inner) ->
+    decals = []
+    r =
+      if inner
+        INNER_RING_RADIUS
+      else
+        OUTER_RING_RADIUS
+
+    r2 = r - (OUTER_RING_RADIUS - INNER_RING_RADIUS) / 2
+
+    smallDecalCount = 10
+    largeDecalCount = 5
+    decalCount = ((smallDecalCount + 1) * largeDecalCount) + 1
+    angleStep = (Math.PI * 2) / 4 / decalCount
+
+    for i in [0...decalCount]
+      large = (i % (smallDecalCount + 1) is 0)
+      angle = i * angleStep
+      if !inner
+        angle -= Math.PI/2
+      decals.push new Decal r, angle, large
+      decals.push new Decal r, angle + Math.PI, large
+      if i == 0 || i == decalCount - 1
+        decals.push new Decal r2, angle, large
+        decals.push new Decal r2, angle + Math.PI, large
+
+    triangleVertexData = []
+    triangleFacesData = []
+    for decal, i in decals
+      previousVerticiesCount = triangleVertexData.length / 2
+      {verticiesData, facesData} = decal.data(previousVerticiesCount)
+      triangleVertexData.push datum for datum in verticiesData
+      triangleFacesData.push datum for datum in facesData
+
+    @createVertexAndFaceBuffers(decals, triangleVertexData, triangleFacesData)
+    return decals
+
   initTexture: ->
     # https://dev.opera.com/articles/webgl-post-processing/
     @texture = @GL.createTexture()
@@ -418,10 +513,13 @@ window.APP = APP = new class
       @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust'])
       @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
       @backgroundShaderProgram = @createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler'])
+      @decalShaderProgram = @createNamedShader('decal', ['position'], ['factor', 'screenRatio', 'angle'])
       @bigHexagons = @initHexagons(HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR)
       @smallHexagons = @initHexagons(SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
       @circleSegments = @initCircleSegments(CIRCLE_SEGMENTS, INNER_RING_RADIUS)
       @backgroundSquare = @initBackgroundSquare()
+      @innerDecals = @initDecals(true)
+      @outerDecals = @initDecals(false)
       @initTexture()
       @image = document.getElementsByTagName('img')[0]
       @video = document.getElementsByTagName('video')[0]
@@ -481,6 +579,18 @@ window.APP = APP = new class
 
       @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
       @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+
+    @decalShaderProgram.use =>
+      @GL.uniform1f(@decalShaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@decalShaderProgram._screenRatio, SCREEN_RATIO)
+      @GL.uniform1f(@decalShaderProgram._angle, 0)
+      for decals, i in [@innerDecals, @outerDecals]
+        #@GL.uniform1f(@decalShaderProgram._angle, (if i == 0 then -Math.PI/2 else Math.PI/2))
+        @GL.bindBuffer(@GL.ARRAY_BUFFER, decals.triangleVertex)
+        @GL.vertexAttribPointer(@decalShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+0), 0)
+
+        @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, decals.triangleFaces)
+        @GL.drawElements(@GL.TRIANGLES, decals.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
     @GL.flush()
 
