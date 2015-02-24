@@ -1,3 +1,5 @@
+ANIMATION_DURATION = 300
+ANIMATION_INTERVAL = 20
 TAN30 = Math.tan(Math.PI/6)
 OUTER_RING_RADIUS = 0.95
 INNER_RING_RADIUS = 0.7
@@ -307,6 +309,8 @@ window.APP = APP = new class
 
     void main(void) {
       vec2 pos = position;
+      // Rotate by angle
+      pos = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * pos;
       pos.x *= factor;
       gl_Position = vec4(pos, 0., 1.);
     }
@@ -583,9 +587,26 @@ window.APP = APP = new class
     @decalShaderProgram.use =>
       @GL.uniform1f(@decalShaderProgram._factor, canvas.height / canvas.width)
       @GL.uniform1f(@decalShaderProgram._screenRatio, SCREEN_RATIO)
-      @GL.uniform1f(@decalShaderProgram._angle, 0)
       for decals, i in [@innerDecals, @outerDecals]
-        #@GL.uniform1f(@decalShaderProgram._angle, (if i == 0 then -Math.PI/2 else Math.PI/2))
+        currentTime = Date.now()
+        intervalDuration = ANIMATION_DURATION
+        intervalCount = ANIMATION_INTERVAL
+        intervalCount = Math.max(Math.ceil(intervalCount / 2) * 2, 2)
+        interval = Math.floor(currentTime / intervalDuration)
+        step = interval % intervalCount
+        if step == 0
+          # Animate
+          position = (currentTime % intervalDuration) / (intervalDuration - 1)
+          rotationAmount = Math.sin(position * Math.PI / 2)
+        else if step == intervalCount / 2
+          # Animate
+          position = (currentTime % intervalDuration) / (intervalDuration - 1)
+          rotationAmount = Math.sin((1 - position) * Math.PI / 2)
+        else if step < intervalCount / 2
+          rotationAmount = 1
+        else
+          rotationAmount = 0
+        @GL.uniform1f(@decalShaderProgram._angle, rotationAmount * (if i == 0 then Math.PI/4 else -Math.PI/4))
         @GL.bindBuffer(@GL.ARRAY_BUFFER, decals.triangleVertex)
         @GL.vertexAttribPointer(@decalShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+0), 0)
 
