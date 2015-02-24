@@ -167,7 +167,7 @@
 
     _Class.prototype.hexagonVertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
 
-    _Class.prototype.hexagonFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  " + colourAdjustmentCode + "\n}";
+    _Class.prototype.hexagonFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nuniform float brightnessAdjust;\nvarying vec2 vUV;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  brightness += brightnessAdjust;\n  " + colourAdjustmentCode + "\n}";
 
     _Class.prototype.bumpVertexShaderSource = "attribute vec2 position;\nattribute float r;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\nvarying float vR;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vR = r;\n  vUV = pos2;\n}";
 
@@ -342,7 +342,7 @@
       try {
         this.initCanvas();
         this.initGLContext();
-        this.shaderProgram = this.createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler']);
+        this.shaderProgram = this.createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust']);
         this.bumpShaderProgram = this.createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler']);
         this.backgroundShaderProgram = this.createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler']);
         this.bigHexagons = [];
@@ -366,7 +366,7 @@
     };
 
     _Class.prototype.draw = function() {
-      var hexagons, textureSource, _i, _len, _ref;
+      var hexagons, i, textureSource, _i, _len, _ref;
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
       this.GL.useProgram(this.backgroundShaderProgram);
@@ -385,8 +385,9 @@
       textureSource = this.video.loaded && !this.video.paused ? this.video : this.image;
       this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, textureSource);
       _ref = [this.bigHexagons, this.smallHexagons];
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        hexagons = _ref[_i];
+      for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
+        hexagons = _ref[i];
+        this.GL.uniform1f(this.shaderProgram._brightnessAdjust, (i === 0 ? -0.14 : -0.06));
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, hexagons.triangleVertex);
         this.GL.vertexAttribPointer(this.shaderProgram._position, 2, this.GL.FLOAT, false, 4 * (2 + 2), 0);
         this.GL.vertexAttribPointer(this.shaderProgram._texPosition, 2, this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);

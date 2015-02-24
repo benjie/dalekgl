@@ -178,12 +178,14 @@ window.APP = APP = new class
   hexagonFragmentShaderSource: """
     precision mediump float;
     uniform sampler2D sampler;
+    uniform float brightnessAdjust;
     varying vec2 vUV;
 
     #{colourAdjustmentDeclarations}
 
     void main(void) {
       vec4 raw = texture2D(sampler, vUV);
+      brightness += brightnessAdjust;
       #{colourAdjustmentCode}
     }
     """
@@ -420,7 +422,7 @@ window.APP = APP = new class
     try
       @initCanvas()
       @initGLContext()
-      @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler'])
+      @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust'])
       @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
       @backgroundShaderProgram = @createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler'])
       @bigHexagons = []
@@ -469,7 +471,8 @@ window.APP = APP = new class
         @image
     @GL.texImage2D(@GL.TEXTURE_2D, 0, @GL.RGBA, @GL.RGBA, @GL.UNSIGNED_BYTE, textureSource)
 
-    for hexagons in [@bigHexagons, @smallHexagons]
+    for hexagons, i in [@bigHexagons, @smallHexagons]
+      @GL.uniform1f(@shaderProgram._brightnessAdjust, (if i == 0 then -0.14 else -0.06))
       @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
       @GL.vertexAttribPointer(@shaderProgram._position, 2, @GL.FLOAT, false, 4*(2+2), 0)
       @GL.vertexAttribPointer(@shaderProgram._texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
