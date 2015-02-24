@@ -396,7 +396,7 @@
       smallDecalCount = 10;
       largeDecalCount = 5;
       decalCount = ((smallDecalCount + 1) * largeDecalCount) + 1;
-      angleStep = (Math.PI * 2) / 4 / decalCount;
+      angleStep = (Math.PI * 2) / 4 / (decalCount - 1);
       for (i = _i = 0; 0 <= decalCount ? _i < decalCount : _i > decalCount; i = 0 <= decalCount ? ++_i : --_i) {
         large = i % (smallDecalCount + 1) === 0;
         angle = i * angleStep;

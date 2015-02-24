@@ -469,7 +469,7 @@ window.APP = APP = new class
     smallDecalCount = 10
     largeDecalCount = 5
     decalCount = ((smallDecalCount + 1) * largeDecalCount) + 1
-    angleStep = (Math.PI * 2) / 4 / decalCount
+    angleStep = (Math.PI * 2) / 4 / (decalCount - 1)
 
     for i in [0...decalCount]
       large = (i % (smallDecalCount + 1) is 0)
