@@ -134,13 +134,13 @@ window.APP = APP = new class
   FRAGMENT: 3
 
   colourAdjustmentDeclarations = """
-    vec4 pixelColour;
+    vec3 pixelColour;
     float contrast = 0.8;
     float brightness = 0.15;
     """
 
   colourAdjustmentCode = """
-    pixelColour = raw;
+    pixelColour = vec3(raw);
     pixelColour += brightness;
     pixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;
     pixelColour.x /= 2.;
@@ -149,7 +149,7 @@ window.APP = APP = new class
     pixelColour.z *= 0.55;
     pixelColour.z += 0.45;
 
-    gl_FragColor = pixelColour;
+    gl_FragColor = vec4(pixelColour, 1.0);
     """
 
   hexagonVertexShaderSource: """
@@ -223,6 +223,39 @@ window.APP = APP = new class
     }
     """
 
+  backgroundVertexShaderSource: """
+    attribute vec2 position;
+    uniform float factor;
+    uniform float screenRatio;
+    varying vec2 vUV;
+
+    void main(void) {
+      gl_Position = vec4(position, 0., 1.);
+      vec2 pos2 = position;
+      pos2.x /= factor;
+      pos2.x /= screenRatio;
+      pos2 = pos2 + 1.;
+      pos2 = pos2 / 2.;
+      vUV = pos2;
+    }
+    """
+
+  backgroundFragmentShaderSource: """
+    precision mediump float;
+    uniform sampler2D sampler;
+    varying vec2 vUV;
+    float darkenAmount = 0.6;
+
+    #{colourAdjustmentDeclarations}
+
+    void main(void) {
+      vec4 raw = texture2D(sampler, vUV);
+      raw = vec4(vec3(raw) - darkenAmount, 1.);
+      #{colourAdjustmentCode}
+      gl_FragColor = vec4(pixelColour, 1.);
+    }
+    """
+
   getShader: (type, source) ->
     shader = @GL.createShader(type)
     @GL.shaderSource(shader, source)
@@ -263,14 +296,6 @@ window.APP = APP = new class
       shaderProgram["_#{varName}"] = @GL.getUniformLocation(shaderProgram, varName)
 
     return shaderProgram
-
-  initShaders: ->
-    @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler'])
-    return true
-
-  initBumpShaders: ->
-    @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
-    return true
 
   initHexagons: (hexagons, hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) ->
 
@@ -348,6 +373,32 @@ window.APP = APP = new class
 
     return true
 
+  initBackgroundSquare: ->
+    square = {}
+    triangleVertexData = [
+      -1, -1
+      1, -1
+      1, 1
+      -1, 1
+    ]
+    triangleFacesData = [
+      0, 1, 2
+      0, 2, 3
+    ]
+
+    square.triangleVertexData = triangleVertexData
+    square.triangleVertex = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ARRAY_BUFFER, square.triangleVertex)
+    @GL.bufferData(@GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), @GL.STATIC_DRAW)
+
+    square.triangleFacesData = triangleFacesData
+    square.triangleFaces = @GL.createBuffer()
+    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, square.triangleFaces)
+    @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
+
+    @backgroundSquare = square
+    return
+
   initTexture: ->
     # https://dev.opera.com/articles/webgl-post-processing/
     @texture = @GL.createTexture()
@@ -365,8 +416,9 @@ window.APP = APP = new class
     try
       @initCanvas()
       @initGLContext()
-      @initShaders()
-      @initBumpShaders()
+      @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler'])
+      @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
+      @backgroundShaderProgram = @createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler'])
       fiddle = 1/150
       @bigHexagons = []
       @initHexagons(@bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity, OUTER_ZOOM_FACTOR)
@@ -374,6 +426,7 @@ window.APP = APP = new class
       @initHexagons(@smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
       @circleSegments = []
       @initCircleSegments(@circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS)
+      @initBackgroundSquare()
       @initTexture()
       @image = document.getElementsByTagName('img')[0]
       @video = document.getElementsByTagName('video')[0]
@@ -387,6 +440,18 @@ window.APP = APP = new class
   draw: =>
     @GL.viewport(0.0, 0.0, @canvas.width, @canvas.height)
     @GL.clear(@GL.COLOR_BUFFER_BIT)
+
+    @GL.useProgram(@backgroundShaderProgram)
+    @GL.uniform1f(@backgroundShaderProgram._factor, canvas.height / canvas.width)
+    @GL.uniform1f(@backgroundShaderProgram._screenRatio, SCREEN_RATIO)
+    @GL.uniform1i(@backgroundShaderProgram._sampler, 0)
+
+    @GL.bindBuffer(@GL.ARRAY_BUFFER, @backgroundSquare.triangleVertex)
+    @GL.vertexAttribPointer(@backgroundShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+0), 0)
+
+    @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @backgroundSquare.triangleFaces)
+    @GL.drawElements(@GL.TRIANGLES, @backgroundSquare.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
+
 
     @GL.useProgram(@shaderProgram)
     @GL.uniform1f(@shaderProgram._factor, canvas.height / canvas.width)

@@ -156,9 +156,9 @@
 
     _Class.prototype.FRAGMENT = 3;
 
-    colourAdjustmentDeclarations = "vec4 pixelColour;\nfloat contrast = 0.8;\nfloat brightness = 0.15;";
+    colourAdjustmentDeclarations = "vec3 pixelColour;\nfloat contrast = 0.8;\nfloat brightness = 0.15;";
 
-    colourAdjustmentCode = "pixelColour = raw;\npixelColour += brightness;\npixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;\npixelColour.x /= 2.;\npixelColour.x -= 0.3;\npixelColour.y -= 0.15;\npixelColour.z *= 0.55;\npixelColour.z += 0.45;\n\ngl_FragColor = pixelColour;";
+    colourAdjustmentCode = "pixelColour = vec3(raw);\npixelColour += brightness;\npixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;\npixelColour.x /= 2.;\npixelColour.x -= 0.3;\npixelColour.y -= 0.15;\npixelColour.z *= 0.55;\npixelColour.z += 0.45;\n\ngl_FragColor = vec4(pixelColour, 1.0);";
 
     _Class.prototype.hexagonVertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
 
@@ -167,6 +167,10 @@
     _Class.prototype.bumpVertexShaderSource = "attribute vec2 position;\nattribute float r;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\nvarying float vR;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vR = r;\n  vUV = pos2;\n}";
 
     _Class.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nvarying float vR;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec2 uv = vUV * 2. - 1.;\n  uv[0] *= pow(vR, 1.3);\n  uv[1] *= pow(vR, 1.3);\n  uv = (uv + 1.) / 2.;\n  vec4 raw = texture2D(sampler, uv);\n  " + colourAdjustmentCode + "\n}";
+
+    _Class.prototype.backgroundVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_Position = vec4(position, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= factor;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
+
+    _Class.prototype.backgroundFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nfloat darkenAmount = 0.6;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  raw = vec4(vec3(raw) - darkenAmount, 1.);\n  " + colourAdjustmentCode + "\n  gl_FragColor = vec4(pixelColour, 1.);\n}";
 
     _Class.prototype.getShader = function(type, source) {
       var shader;
@@ -217,16 +221,6 @@
         shaderProgram["_" + varName] = this.GL.getUniformLocation(shaderProgram, varName);
       }
       return shaderProgram;
-    };
-
-    _Class.prototype.initShaders = function() {
-      this.shaderProgram = this.createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler']);
-      return true;
-    };
-
-    _Class.prototype.initBumpShaders = function() {
-      this.bumpShaderProgram = this.createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler']);
-      return true;
     };
 
     _Class.prototype.initHexagons = function(hexagons, hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) {
@@ -311,6 +305,22 @@
       return true;
     };
 
+    _Class.prototype.initBackgroundSquare = function() {
+      var square, triangleFacesData, triangleVertexData;
+      square = {};
+      triangleVertexData = [-1, -1, 1, -1, 1, 1, -1, 1];
+      triangleFacesData = [0, 1, 2, 0, 2, 3];
+      square.triangleVertexData = triangleVertexData;
+      square.triangleVertex = this.GL.createBuffer();
+      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, square.triangleVertex);
+      this.GL.bufferData(this.GL.ARRAY_BUFFER, new Float32Array(triangleVertexData), this.GL.STATIC_DRAW);
+      square.triangleFacesData = triangleFacesData;
+      square.triangleFaces = this.GL.createBuffer();
+      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, square.triangleFaces);
+      this.GL.bufferData(this.GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), this.GL.STATIC_DRAW);
+      this.backgroundSquare = square;
+    };
+
     _Class.prototype.initTexture = function() {
       this.texture = this.GL.createTexture();
       this.GL.pixelStorei(this.GL.UNPACK_FLIP_Y_WEBGL, true);
@@ -327,8 +337,9 @@
       try {
         this.initCanvas();
         this.initGLContext();
-        this.initShaders();
-        this.initBumpShaders();
+        this.shaderProgram = this.createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler']);
+        this.bumpShaderProgram = this.createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler']);
+        this.backgroundShaderProgram = this.createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler']);
         fiddle = 1 / 150;
         this.bigHexagons = [];
         this.initHexagons(this.bigHexagons, HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + fiddle, Infinity, OUTER_ZOOM_FACTOR);
@@ -336,6 +347,7 @@
         this.initHexagons(this.smallHexagons, SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + fiddle, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR);
         this.circleSegments = [];
         this.initCircleSegments(this.circleSegments, CIRCLE_SEGMENTS, INNER_RING_RADIUS);
+        this.initBackgroundSquare();
         this.initTexture();
         this.image = document.getElementsByTagName('img')[0];
         this.video = document.getElementsByTagName('video')[0];
@@ -353,6 +365,14 @@
       var hexagons, textureSource, _i, _len, _ref;
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
+      this.GL.useProgram(this.backgroundShaderProgram);
+      this.GL.uniform1f(this.backgroundShaderProgram._factor, canvas.height / canvas.width);
+      this.GL.uniform1f(this.backgroundShaderProgram._screenRatio, SCREEN_RATIO);
+      this.GL.uniform1i(this.backgroundShaderProgram._sampler, 0);
+      this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.backgroundSquare.triangleVertex);
+      this.GL.vertexAttribPointer(this.backgroundShaderProgram._position, 2, this.GL.FLOAT, false, 4 * (2 + 0), 0);
+      this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.backgroundSquare.triangleFaces);
+      this.GL.drawElements(this.GL.TRIANGLES, this.backgroundSquare.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
       this.GL.useProgram(this.shaderProgram);
       this.GL.uniform1f(this.shaderProgram._factor, canvas.height / canvas.width);
       this.GL.uniform1f(this.shaderProgram._screenRatio, SCREEN_RATIO);
