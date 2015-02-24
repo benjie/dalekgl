@@ -208,13 +208,13 @@
       this.GL.attachShader(shaderProgram, fragmentShader);
       this.GL.linkProgram(shaderProgram);
       this.shaderProgram = shaderProgram;
-      this._position = this.GL.getAttribLocation(shaderProgram, "position");
-      this._texPosition = this.GL.getAttribLocation(shaderProgram, "texPosition");
-      this._factor = this.GL.getUniformLocation(shaderProgram, "factor");
-      this._screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
-      this._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
-      this.GL.enableVertexAttribArray(this._position);
-      this.GL.enableVertexAttribArray(this._texPosition);
+      this.shaderProgram._position = this.GL.getAttribLocation(shaderProgram, "position");
+      this.shaderProgram._texPosition = this.GL.getAttribLocation(shaderProgram, "texPosition");
+      this.shaderProgram._factor = this.GL.getUniformLocation(shaderProgram, "factor");
+      this.shaderProgram._screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
+      this.shaderProgram._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
+      this.GL.enableVertexAttribArray(this.shaderProgram._position);
+      this.GL.enableVertexAttribArray(this.shaderProgram._texPosition);
       return true;
     };
 
@@ -227,12 +227,12 @@
       this.GL.attachShader(shaderProgram, fragmentShader);
       this.GL.linkProgram(shaderProgram);
       this.bumpShaderProgram = shaderProgram;
-      this._2position = this.GL.getAttribLocation(shaderProgram, "position");
-      this._2r = this.GL.getAttribLocation(shaderProgram, "r");
-      this._2factor = this.GL.getUniformLocation(shaderProgram, "factor");
-      this._2screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
-      this._2sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
-      this.GL.enableVertexAttribArray(this._2position);
+      this.bumpShaderProgram._position = this.GL.getAttribLocation(shaderProgram, "position");
+      this.bumpShaderProgram._r = this.GL.getAttribLocation(shaderProgram, "r");
+      this.bumpShaderProgram._factor = this.GL.getUniformLocation(shaderProgram, "factor");
+      this.bumpShaderProgram._screenRatio = this.GL.getUniformLocation(shaderProgram, "screenRatio");
+      this.bumpShaderProgram._sampler = this.GL.getUniformLocation(shaderProgram, "sampler");
+      this.GL.enableVertexAttribArray(this.bumpShaderProgram._position);
       return true;
     };
 
@@ -361,9 +361,9 @@
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
       this.GL.clear(this.GL.COLOR_BUFFER_BIT);
       this.GL.useProgram(this.shaderProgram);
-      this.GL.uniform1f(this._factor, canvas.height / canvas.width);
-      this.GL.uniform1f(this._screenRatio, SCREEN_RATIO);
-      this.GL.uniform1i(this._sampler, 0);
+      this.GL.uniform1f(this.shaderProgram._factor, canvas.height / canvas.width);
+      this.GL.uniform1f(this.shaderProgram._screenRatio, SCREEN_RATIO);
+      this.GL.uniform1i(this.shaderProgram._sampler, 0);
       this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
       textureSource = this.video.loaded ? this.video : this.image;
       this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, textureSource);
@@ -371,18 +371,18 @@
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         hexagons = _ref[_i];
         this.GL.bindBuffer(this.GL.ARRAY_BUFFER, hexagons.triangleVertex);
-        this.GL.vertexAttribPointer(this._position, 2, this.GL.FLOAT, false, 4 * (2 + 2), 0);
-        this.GL.vertexAttribPointer(this._texPosition, 2, this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);
+        this.GL.vertexAttribPointer(this.shaderProgram._position, 2, this.GL.FLOAT, false, 4 * (2 + 2), 0);
+        this.GL.vertexAttribPointer(this.shaderProgram._texPosition, 2, this.GL.FLOAT, false, 4 * (2 + 2), 2 * 4);
         this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces);
         this.GL.drawElements(this.GL.TRIANGLES, hexagons.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
       }
       this.GL.useProgram(this.bumpShaderProgram);
-      this.GL.uniform1f(this._2factor, canvas.height / canvas.width);
-      this.GL.uniform1f(this._2screenRatio, SCREEN_RATIO);
-      this.GL.uniform1i(this._2sampler, 0);
+      this.GL.uniform1f(this.bumpShaderProgram._factor, canvas.height / canvas.width);
+      this.GL.uniform1f(this.bumpShaderProgram._screenRatio, SCREEN_RATIO);
+      this.GL.uniform1i(this.bumpShaderProgram._sampler, 0);
       this.GL.bindBuffer(this.GL.ARRAY_BUFFER, this.circleSegments.triangleVertex);
-      this.GL.vertexAttribPointer(this._2position, 2, this.GL.FLOAT, false, 4 * (2 + 1), 0);
-      this.GL.vertexAttribPointer(this._2r, 1, this.GL.FLOAT, false, 4 * (2 + 1), 4 * 2);
+      this.GL.vertexAttribPointer(this.bumpShaderProgram._position, 2, this.GL.FLOAT, false, 4 * (2 + 1), 0);
+      this.GL.vertexAttribPointer(this.bumpShaderProgram._r, 1, this.GL.FLOAT, false, 4 * (2 + 1), 4 * 2);
       this.GL.bindBuffer(this.GL.ELEMENT_ARRAY_BUFFER, this.circleSegments.triangleFaces);
       this.GL.drawElements(this.GL.TRIANGLES, this.circleSegments.triangleFacesData.length, this.GL.UNSIGNED_SHORT, 0);
       this.GL.flush();

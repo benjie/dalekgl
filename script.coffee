@@ -255,14 +255,14 @@ window.APP = APP = new class
     @GL.linkProgram(shaderProgram)
 
     @shaderProgram = shaderProgram
-    @_position = @GL.getAttribLocation(shaderProgram, "position")
-    @_texPosition = @GL.getAttribLocation(shaderProgram, "texPosition")
-    @_factor = @GL.getUniformLocation(shaderProgram, "factor")
-    @_screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
-    @_sampler = @GL.getUniformLocation(shaderProgram, "sampler")
+    @shaderProgram._position = @GL.getAttribLocation(shaderProgram, "position")
+    @shaderProgram._texPosition = @GL.getAttribLocation(shaderProgram, "texPosition")
+    @shaderProgram._factor = @GL.getUniformLocation(shaderProgram, "factor")
+    @shaderProgram._screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
+    @shaderProgram._sampler = @GL.getUniformLocation(shaderProgram, "sampler")
 
-    @GL.enableVertexAttribArray(@_position)
-    @GL.enableVertexAttribArray(@_texPosition)
+    @GL.enableVertexAttribArray(@shaderProgram._position)
+    @GL.enableVertexAttribArray(@shaderProgram._texPosition)
 
     return true
 
@@ -275,13 +275,13 @@ window.APP = APP = new class
     @GL.linkProgram(shaderProgram)
 
     @bumpShaderProgram = shaderProgram
-    @_2position = @GL.getAttribLocation(shaderProgram, "position")
-    @_2r = @GL.getAttribLocation(shaderProgram, "r")
-    @_2factor = @GL.getUniformLocation(shaderProgram, "factor")
-    @_2screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
-    @_2sampler = @GL.getUniformLocation(shaderProgram, "sampler")
+    @bumpShaderProgram._position = @GL.getAttribLocation(shaderProgram, "position")
+    @bumpShaderProgram._r = @GL.getAttribLocation(shaderProgram, "r")
+    @bumpShaderProgram._factor = @GL.getUniformLocation(shaderProgram, "factor")
+    @bumpShaderProgram._screenRatio = @GL.getUniformLocation(shaderProgram, "screenRatio")
+    @bumpShaderProgram._sampler = @GL.getUniformLocation(shaderProgram, "sampler")
 
-    @GL.enableVertexAttribArray(@_2position)
+    @GL.enableVertexAttribArray(@bumpShaderProgram._position)
 
     return true
 
@@ -402,9 +402,9 @@ window.APP = APP = new class
     @GL.clear(@GL.COLOR_BUFFER_BIT)
 
     @GL.useProgram(@shaderProgram)
-    @GL.uniform1f(@_factor, canvas.height / canvas.width)
-    @GL.uniform1f(@_screenRatio, SCREEN_RATIO)
-    @GL.uniform1i(@_sampler, 0)
+    @GL.uniform1f(@shaderProgram._factor, canvas.height / canvas.width)
+    @GL.uniform1f(@shaderProgram._screenRatio, SCREEN_RATIO)
+    @GL.uniform1i(@shaderProgram._sampler, 0)
 
     @GL.bindTexture(@GL.TEXTURE_2D, @texture)
     textureSource =
@@ -416,19 +416,19 @@ window.APP = APP = new class
 
     for hexagons in [@bigHexagons, @smallHexagons]
       @GL.bindBuffer(@GL.ARRAY_BUFFER, hexagons.triangleVertex)
-      @GL.vertexAttribPointer(@_position, 2, @GL.FLOAT, false, 4*(2+2), 0)
-      @GL.vertexAttribPointer(@_texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
+      @GL.vertexAttribPointer(@shaderProgram._position, 2, @GL.FLOAT, false, 4*(2+2), 0)
+      @GL.vertexAttribPointer(@shaderProgram._texPosition, 2, @GL.FLOAT, false, 4*(2+2), 2*4)
 
       @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, hexagons.triangleFaces)
       @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
     @GL.useProgram(@bumpShaderProgram)
-    @GL.uniform1f(@_2factor, canvas.height / canvas.width)
-    @GL.uniform1f(@_2screenRatio, SCREEN_RATIO)
-    @GL.uniform1i(@_2sampler, 0)
+    @GL.uniform1f(@bumpShaderProgram._factor, canvas.height / canvas.width)
+    @GL.uniform1f(@bumpShaderProgram._screenRatio, SCREEN_RATIO)
+    @GL.uniform1i(@bumpShaderProgram._sampler, 0)
     @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
-    @GL.vertexAttribPointer(@_2position, 2, @GL.FLOAT, false, 4*(2+1), 0)
-    @GL.vertexAttribPointer(@_2r, 1, @GL.FLOAT, false, 4*(2+1), 4*2)
+    @GL.vertexAttribPointer(@bumpShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+1), 0)
+    @GL.vertexAttribPointer(@bumpShaderProgram._r, 1, @GL.FLOAT, false, 4*(2+1), 4*2)
 
     @GL.bindBuffer(@GL.ELEMENT_ARRAY_BUFFER, @circleSegments.triangleFaces)
     @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
