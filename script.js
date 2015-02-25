@@ -232,7 +232,7 @@
 
     _Class.prototype.backgroundFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nfloat darkenAmount = 0.6;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  raw = vec4(vec3(raw) - darkenAmount, 1.);\n  " + colourAdjustmentCode + "\n  gl_FragColor = vec4(pixelColour, 1.);\n}";
 
-    _Class.prototype.decalVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nuniform float angle;\n\nvoid main(void) {\n  vec2 pos = position;\n  // Rotate by angle\n  pos = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * pos;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n}";
+    _Class.prototype.decalVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nuniform mat2 transform;\n\nvoid main(void) {\n  vec2 pos = position;\n  // Rotate by angle\n  pos = transform * pos;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n}";
 
     _Class.prototype.decalFragmentShaderSource = "precision mediump float;\n\nvoid main(void) {\n  gl_FragColor = vec4(0.4, 0.7, 1., 0.2);\n}";
 
@@ -452,7 +452,7 @@
         this.shaderProgram = this.createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust']);
         this.bumpShaderProgram = this.createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler']);
         this.backgroundShaderProgram = this.createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler']);
-        this.decalShaderProgram = this.createNamedShader('decal', ['position'], ['factor', 'screenRatio', 'angle']);
+        this.decalShaderProgram = this.createNamedShader('decal', ['position'], ['factor', 'screenRatio', 'transform']);
         this.bigHexagons = this.initHexagons(HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR);
         this.smallHexagons = this.initHexagons(SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR);
         this.circleSegments = this.initCircleSegments(CIRCLE_SEGMENTS, INNER_RING_RADIUS);
@@ -524,7 +524,7 @@
       })(this));
       this.decalShaderProgram.use((function(_this) {
         return function() {
-          var currentTime, decals, i, interval, intervalCount, intervalDuration, position, rotationAmount, step, _i, _len, _ref, _results;
+          var angle, currentTime, decals, i, interval, intervalCount, intervalDuration, position, rotationAmount, step, _i, _len, _ref, _results;
           _this.GL.uniform1f(_this.decalShaderProgram._factor, canvas.height / canvas.width);
           _this.GL.uniform1f(_this.decalShaderProgram._screenRatio, SCREEN_RATIO);
           _ref = [_this.innerDecals, _this.outerDecals];
@@ -548,7 +548,8 @@
             } else {
               rotationAmount = 0;
             }
-            _this.GL.uniform1f(_this.decalShaderProgram._angle, rotationAmount * (i === 0 ? Math.PI / 4 : -Math.PI / 4));
+            angle = rotationAmount * (i === 0 ? Math.PI / 4 : -Math.PI / 4);
+            _this.GL.uniformMatrix2fv(_this.decalShaderProgram._transform, _this.GL.FALSE, new Float32Array([Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle)]));
             _this.GL.bindBuffer(_this.GL.ARRAY_BUFFER, decals.triangleVertex);
             _this.GL.vertexAttribPointer(_this.decalShaderProgram._position, 2, _this.GL.FLOAT, false, 4 * (2 + 0), 0);
             _this.GL.bindBuffer(_this.GL.ELEMENT_ARRAY_BUFFER, decals.triangleFaces);

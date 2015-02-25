@@ -305,12 +305,12 @@ window.APP = APP = new class
     attribute vec2 position;
     uniform float factor;
     uniform float screenRatio;
-    uniform float angle;
+    uniform mat2 transform;
 
     void main(void) {
       vec2 pos = position;
       // Rotate by angle
-      pos = mat2(cos(angle), -sin(angle), sin(angle), cos(angle)) * pos;
+      pos = transform * pos;
       pos.x *= factor;
       gl_Position = vec4(pos, 0., 1.);
     }
@@ -517,7 +517,7 @@ window.APP = APP = new class
       @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust'])
       @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
       @backgroundShaderProgram = @createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler'])
-      @decalShaderProgram = @createNamedShader('decal', ['position'], ['factor', 'screenRatio', 'angle'])
+      @decalShaderProgram = @createNamedShader('decal', ['position'], ['factor', 'screenRatio', 'transform'])
       @bigHexagons = @initHexagons(HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR)
       @smallHexagons = @initHexagons(SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
       @circleSegments = @initCircleSegments(CIRCLE_SEGMENTS, INNER_RING_RADIUS)
@@ -606,7 +606,8 @@ window.APP = APP = new class
           rotationAmount = 1
         else
           rotationAmount = 0
-        @GL.uniform1f(@decalShaderProgram._angle, rotationAmount * (if i == 0 then Math.PI/4 else -Math.PI/4))
+        angle = rotationAmount * (if i == 0 then Math.PI/4 else -Math.PI/4)
+        @GL.uniformMatrix2fv(@decalShaderProgram._transform, @GL.FALSE, new Float32Array([Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle)]))
         @GL.bindBuffer(@GL.ARRAY_BUFFER, decals.triangleVertex)
         @GL.vertexAttribPointer(@decalShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+0), 0)
 
