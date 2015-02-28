@@ -48,7 +48,7 @@ class Exporter extends App
       //////////////////////
       // #{name} faces data
       //////////////////////
-        static unsigned int #{name}FacesData[] = {#{block(facesData, 4, 6)}
+        static unsigned short #{name}FacesData[] = {#{block(facesData, 4, 6)}
         };
         glGenBuffers(1, &state->#{name}FacesBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state->#{name}FacesBuffer);
