@@ -62,9 +62,12 @@ class Exporter extends App
       static void init_texture(CUBE_STATE_T *state)
       {
         check();
+        load_tex_images(state);
+        check();
         glGenTextures(1, &state->texture);
         check();
         //glPixelStorei(UNPACK_FLIP_Y_WEBGL, true);
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, state->texture);
         check();
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -78,10 +81,10 @@ class Exporter extends App
 
         // TEMPORARY
 
-        load_tex_images(state);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, IMAGE_SIZE, IMAGE_SIZE, 0,
                 GL_RGB, GL_UNSIGNED_BYTE, state->tex_buf1);
         check();
+
 
 
 
@@ -91,7 +94,7 @@ class Exporter extends App
       """
   initElements: ->
   createNamedShader: (name, attributes, uniforms) ->
-    return if name is 'decal'
+    return if name in ['decal', 'bump']
     @shaders.push {name, attributes, uniforms}
     enableVertexArrays = (enable = true) ->
       tmp = []
@@ -392,8 +395,6 @@ class Exporter extends App
       static void init_summink(CUBE_STATE_T *state)
       {
         check();
-        glClearColor(0., 0., 0., 1.);
-        check();
 
         // Prepare a texture image
         glGenTextures(1, &state->outputTexture);
@@ -428,6 +429,7 @@ class Exporter extends App
         // Now render to the main frame buffer
         glBindFramebuffer(GL_FRAMEBUFFER,0);
         // Clear the background (not really necessary I suppose)
+        glViewport(0, 0, state->screen_width, state->screen_height);
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         check();
 
@@ -482,8 +484,10 @@ class Exporter extends App
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         */
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
 
         glFlush();
+        check();
         glFinish();
         check();
 
@@ -497,17 +501,21 @@ class Exporter extends App
 
         // Clear application state
         memset(state, 0, sizeof(*state));
+        state->verbose = 1;
 
+        printf("Initialising...\\n");
         // Start OGLES
         init_ogl(state);
         init_shaders(state);
         init_shapes(state);
         init_texture(state);
         init_summink(state);
+        printf("Initialised.\\n");
 
         //draw_mandelbrot_to_texture(state);
         while (1)
         {
+          printf("Drawing...\\n");
           draw_triangles(state);
         }
         return 0;
