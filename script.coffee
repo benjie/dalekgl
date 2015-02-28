@@ -4,10 +4,10 @@ TAN30 = Math.tan(Math.PI/6)
 OUTER_RING_RADIUS = 0.95
 INNER_RING_RADIUS = 0.7
 RING_WIDTH = 1/200
-HEXAGONS_HIGH = 55
+HEXAGONS_HIGH = 10
 SCREEN_RATIO = 16/9 # 16:9 ratio
-SMALL_HEXAGONS_HIGH = 75
-CIRCLE_SEGMENTS = 32
+SMALL_HEXAGONS_HIGH = 7
+CIRCLE_SEGMENTS = 4
 OUTER_ZOOM_FACTOR = 1.11
 INNER_ZOOM_FACTOR = 1.06
 INNER_BUMP_R = 0.7
@@ -655,4 +655,4 @@ if window?
   window.APP = APP = new App
   window.addEventListener 'DOMContentLoaded', APP.start, false
 else
-  module.exports = App
+  module.exports = {App, SCREEN_RATIO}

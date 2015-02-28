@@ -15,13 +15,13 @@
 
   RING_WIDTH = 1 / 200;
 
-  HEXAGONS_HIGH = 55;
+  HEXAGONS_HIGH = 10;
 
   SCREEN_RATIO = 16 / 9;
 
-  SMALL_HEXAGONS_HIGH = 75;
+  SMALL_HEXAGONS_HIGH = 7;
 
-  CIRCLE_SEGMENTS = 32;
+  CIRCLE_SEGMENTS = 4;
 
   OUTER_ZOOM_FACTOR = 1.11;
 
@@ -622,7 +622,10 @@
     window.APP = APP = new App;
     window.addEventListener('DOMContentLoaded', APP.start, false);
   } else {
-    module.exports = App;
+    module.exports = {
+      App: App,
+      SCREEN_RATIO: SCREEN_RATIO
+    };
   }
 
 }).call(this);

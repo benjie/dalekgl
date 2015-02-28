@@ -1,4 +1,4 @@
-App = require './script'
+{App, SCREEN_RATIO} = require './script'
 
 class Exporter extends App
   beginInitShaders: ->
@@ -20,6 +20,8 @@ class Exporter extends App
 
   createVertexAndFaceBuffers: (name, object, vertexData, facesData) ->
     @buffers.push {name, object, vertexData, facesData}
+    object.triangleVertexData = vertexData
+    object.triangleFacesData = facesData
     block = (data, indent, size) ->
       indentString = new Array(indent + 1).join(" ")
       dataString = []
@@ -35,11 +37,13 @@ class Exporter extends App
       //////////////////////
       // #{name} vertex data
       //////////////////////
+        check();
         static const GLfloat #{name}VertexData[] = {#{block(vertexData, 4, 6)}
         };
         glGenBuffers(1, &state->#{name}VertexBuffer);
         glBindBuffer(GL_ARRAY_BUFFER, state->#{name}VertexBuffer);
         glBufferData(GL_ARRAY_BUFFER, sizeof(#{name}VertexData), #{name}VertexData, GL_STATIC_DRAW);
+        check();
 
       //////////////////////
       // #{name} faces data
@@ -49,6 +53,7 @@ class Exporter extends App
         glGenBuffers(1, &state->#{name}FacesBuffer);
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state->#{name}FacesBuffer);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(#{name}FacesData), #{name}FacesData, GL_STATIC_DRAW);
+        check();
 
       """
 
@@ -56,18 +61,37 @@ class Exporter extends App
     @output.push """
       static void init_texture(CUBE_STATE_T *state)
       {
+        check();
         glGenTextures(1, &state->texture);
+        check();
         //glPixelStorei(UNPACK_FLIP_Y_WEBGL, true);
-        glBindTexture(TEXTURE_2D, state->texture);
-        glTexParameteri(TEXTURE_2D, TEXTURE_WRAP_S, CLAMP_TO_EDGE);
-        glTexParameteri(TEXTURE_2D, TEXTURE_WRAP_T, CLAMP_TO_EDGE);
-        glTexParameteri(TEXTURE_2D, TEXTURE_MIN_FILTER, NEAREST);
-        glTexParameteri(TEXTURE_2D, TEXTURE_MAG_FILTER, NEAREST);
-        glBindTexture(TEXTURE_2D, null);
+        glBindTexture(GL_TEXTURE_2D, state->texture);
+        check();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        check();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+        check();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+        check();
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+        check();
+
+        // TEMPORARY
+
+        load_tex_images(state);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, IMAGE_SIZE, IMAGE_SIZE, 0,
+                GL_RGB, GL_UNSIGNED_BYTE, state->tex_buf1);
+        check();
+
+
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+        check();
       }
       """
   initElements: ->
   createNamedShader: (name, attributes, uniforms) ->
+    return if name is 'decal'
     @shaders.push {name, attributes, uniforms}
     enableVertexArrays = (enable = true) ->
       tmp = []
@@ -91,18 +115,29 @@ class Exporter extends App
 
       """
     output = @output
+
     output.push "  const GLchar *#{name}VertexShaderSource ="
     source = this["#{name}VertexShaderSource"]
     for line in source.split(/\n/)
       output.push "    \"#{line}\""
+    output[output.length-1] += ";"
+
+    output.push "  const GLchar *#{name}FragmentShaderSource ="
+    source = this["#{name}FragmentShaderSource"]
+    for line in source.split(/\n/)
+      output.push "    \"#{line}\""
+    output[output.length-1] += ";"
+
     output.push """
 
       //////////////////////
       // #{name} shader
       //////////////////////
 
+        check();
         state->#{name}VertexShader = glCreateShader(GL_VERTEX_SHADER);
         glShaderSource(state->#{name}VertexShader, 1, &#{name}VertexShaderSource, 0);
+        check();
         glCompileShader(state->#{name}VertexShader);
         check();
 
@@ -110,8 +145,10 @@ class Exporter extends App
           showlog(state->#{name}VertexShader);
         }
 
+        check();
         state->#{name}FragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
         glShaderSource(state->#{name}FragmentShader, 1, &#{name}FragmentShaderSource, 0);
+        check();
         glCompileShader(state->#{name}FragmentShader);
         check();
 
@@ -121,7 +158,9 @@ class Exporter extends App
 
         state->#{name}Program = glCreateProgram();
         glAttachShader(state->#{name}Program, state->#{name}VertexShader);
+        check();
         glAttachShader(state->#{name}Program, state->#{name}FragmentShader);
+        check();
         glLinkProgram(state->#{name}Program);
         check();
 
@@ -131,9 +170,9 @@ class Exporter extends App
       """
 
     for attribute in attributes
-      output.push "  state->#{name}_attr_#{attribute} = glGetAttribLocation(state->#{name}Program, \"#{attribute}\");"
+      output.push "  state->#{name}_attr_#{attribute} = glGetAttribLocation(state->#{name}Program, \"#{attribute}\");\n  check();"
     for uniform in uniforms
-      output.push "  state->#{name}_unif_#{uniform} = glGetUniformLocation(state->#{name}Program, \"#{uniform}\");"
+      output.push "  state->#{name}_unif_#{uniform} = glGetUniformLocation(state->#{name}Program, \"#{uniform}\");\n  check();"
 
   export: ->
     @output = []
@@ -169,6 +208,9 @@ class Exporter extends App
       #include "EGL/egl.h"
       #include "EGL/eglext.h"
 
+      #define PATH "./"
+      #define IMAGE_SIZE 128
+
       typedef struct
       {
         uint32_t screen_width;
@@ -187,6 +229,8 @@ class Exporter extends App
         GLuint outputTextureFramebuffer;
         GLuint outputTexture;
 
+        GLuint texture;
+
       #{(shaderDefinitions(shader) for shader in @shaders).join("\n\n")}
 
       #{(
@@ -199,6 +243,9 @@ class Exporter extends App
         GLuint unif_color, attr_vertex, unif_scale, unif_offset, unif_tex, unif_centre;
       // mandelbrot attribs
         GLuint attr_vertex2, unif_scale2, unif_offset2, unif_centre2;
+
+        char * tex_buf1;
+
       } CUBE_STATE_T;
 
       static CUBE_STATE_T _state, *state=&_state;
@@ -210,7 +257,7 @@ class Exporter extends App
          // Prints the compile log for a shader
          char log[1024];
          glGetShaderInfoLog(shader,sizeof log,NULL,log);
-         printf("%d:shader:\n%s\n", shader, log);
+         printf("%d:shader:\\n%s\\n", shader, log);
       }
 
       static void showprogramlog(GLint shader)
@@ -218,11 +265,30 @@ class Exporter extends App
          // Prints the information log for a program object
          char log[1024];
          glGetProgramInfoLog(shader,sizeof log,NULL,log);
-         printf("%d:program:\n%s\n", shader, log);
+         printf("%d:program:\\n%s\\n", shader, log);
+      }
+
+      static void load_tex_images(CUBE_STATE_T *state)
+      {
+        FILE *tex_file1 = NULL;
+        int bytes_read, image_sz = IMAGE_SIZE*IMAGE_SIZE*3;
+
+        state->tex_buf1 = malloc(image_sz);
+
+        tex_file1 = fopen(PATH "Lucca_128_128.raw", "rb");
+        if (tex_file1 && state->tex_buf1)
+        {
+           bytes_read=fread(state->tex_buf1, 1, image_sz, tex_file1);
+           assert(bytes_read == image_sz);  // some problem with file?
+           fclose(tex_file1);
+        }
+
       }
       """
 
     @output.push """
+
+
       static void init_ogl(CUBE_STATE_T *state)
       {
         int32_t success = 0;
@@ -318,13 +384,16 @@ class Exporter extends App
 
         // Set background color and clear buffers
         glClearColor(0.15f, 0.25f, 0.35f, 1.0f);
+        check();
         glClear( GL_COLOR_BUFFER_BIT );
 
         check();
       }
       static void init_summink(CUBE_STATE_T *state)
       {
+        check();
         glClearColor(0., 0., 0., 1.);
+        check();
 
         // Prepare a texture image
         glGenTextures(1, &state->outputTexture);
@@ -362,6 +431,39 @@ class Exporter extends App
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         check();
 
+        glBindTexture(GL_TEXTURE_2D, state->texture);
+        check();
+
+        backgroundShaderEnable(state);
+        check();
+        glUniform1f(state->background_unif_factor, state->screen_height / (GLfloat)state->screen_width);
+        check();
+        glUniform1f(state->background_unif_screenRatio, #{SCREEN_RATIO});
+        check();
+        //glUniform1f(state->background_unif_sampler, 0);
+        glUniform1i(state->background_unif_sampler, GL_TEXTURE0);
+        check();
+
+        glBindBuffer(GL_ARRAY_BUFFER, state->backgroundSquareVertexBuffer);
+        check();
+        glVertexAttribPointer(state->background_attr_position, 2, GL_FLOAT, GL_FALSE, 4*(2+0), 0);
+        check();
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state->backgroundSquareFacesBuffer);
+        check();
+        glDrawElements(GL_TRIANGLES, #{@backgroundSquare.triangleFacesData.length}, GL_UNSIGNED_SHORT, 0);
+        check();
+
+        backgroundShaderDisable(state);
+        check();
+
+
+
+
+
+        glBindTexture(GL_TEXTURE_2D, 0);
+
+        /*
         glBindBuffer(GL_ARRAY_BUFFER, state->buf);
         check();
         glUseProgram ( state->program );
@@ -379,6 +481,7 @@ class Exporter extends App
         check();
 
         glBindBuffer(GL_ARRAY_BUFFER, 0);
+        */
 
         glFlush();
         glFinish();
@@ -398,6 +501,9 @@ class Exporter extends App
         // Start OGLES
         init_ogl(state);
         init_shaders(state);
+        init_shapes(state);
+        init_texture(state);
+        init_summink(state);
 
         //draw_mandelbrot_to_texture(state);
         while (1)
