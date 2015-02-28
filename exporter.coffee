@@ -64,6 +64,7 @@ class Exporter extends App
         check();
         load_tex_images(state);
         check();
+        glActiveTexture(GL_TEXTURE0);
         glGenTextures(1, &state->texture);
         check();
         //glPixelStorei(UNPACK_FLIP_Y_WEBGL, true);
@@ -433,6 +434,7 @@ class Exporter extends App
         glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
         check();
 
+        glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, state->texture);
         check();
 
@@ -443,12 +445,12 @@ class Exporter extends App
         glUniform1f(state->background_unif_screenRatio, #{SCREEN_RATIO});
         check();
         //glUniform1f(state->background_unif_sampler, 0);
-        glUniform1i(state->background_unif_sampler, GL_TEXTURE0);
+        glUniform1i(state->background_unif_sampler, 0);
         check();
 
         glBindBuffer(GL_ARRAY_BUFFER, state->backgroundSquareVertexBuffer);
         check();
-        glVertexAttribPointer(state->background_attr_position, 2, GL_FLOAT, GL_FALSE, 4*(2+0), 0);
+        glVertexAttribPointer(state->background_attr_position, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*(2+0), 0);
         check();
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state->backgroundSquareFacesBuffer);
