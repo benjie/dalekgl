@@ -172,7 +172,7 @@ class Hexagon
         verticiesData.push py
     return verticiesData: verticiesData, facesData: facesData
 
-window.APP = APP = new class
+class App
   VERTEX: 2
   FRAGMENT: 3
 
@@ -373,7 +373,7 @@ window.APP = APP = new class
 
     return shaderProgram
 
-  createVertexAndFaceBuffers: (object, triangleVertexData, triangleFacesData) ->
+  createVertexAndFaceBuffers: (name, object, triangleVertexData, triangleFacesData) ->
     object.triangleVertexData = triangleVertexData
     object.triangleVertex = @GL.createBuffer()
     @GL.bindBuffer(@GL.ARRAY_BUFFER, object.triangleVertex)
@@ -385,7 +385,7 @@ window.APP = APP = new class
     @GL.bufferData(@GL.ELEMENT_ARRAY_BUFFER, new Uint16Array(triangleFacesData), @GL.STATIC_DRAW)
     return object
 
-  initHexagons: (hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) ->
+  initHexagons: (name, hexagonsHigh, widthToHeight, minR, maxR, zoomFactor) ->
     hexagons = []
     size = 2 / (hexagonsHigh / TAN30)
     fiddle =
@@ -412,10 +412,10 @@ window.APP = APP = new class
       triangleVertexData.push datum for datum in verticiesData
       triangleFacesData.push datum for datum in facesData
 
-    @createVertexAndFaceBuffers(hexagons, triangleVertexData, triangleFacesData)
+    @createVertexAndFaceBuffers(name, hexagons, triangleVertexData, triangleFacesData)
     return hexagons
 
-  initCircleSegments: (segmentCount, radius) ->
+  initCircleSegments: (name, segmentCount, radius) ->
     segments = {}
     angleStep = 2 * Math.PI / segmentCount
     angle = 0
@@ -441,10 +441,10 @@ window.APP = APP = new class
       for point in face
         triangleFacesData.push point
 
-    @createVertexAndFaceBuffers(segments, triangleVertexData, triangleFacesData)
+    @createVertexAndFaceBuffers(name, segments, triangleVertexData, triangleFacesData)
     return segments
 
-  initBackgroundSquare: ->
+  initBackgroundSquare: (name) ->
     square = {}
     triangleVertexData = [
       -1, -1
@@ -457,10 +457,10 @@ window.APP = APP = new class
       0, 2, 3
     ]
 
-    @createVertexAndFaceBuffers(square, triangleVertexData, triangleFacesData)
+    @createVertexAndFaceBuffers(name, square, triangleVertexData, triangleFacesData)
     return square
 
-  initDecals: (inner) ->
+  initDecals: (name, inner) ->
     decals = []
     r =
       if inner
@@ -494,7 +494,7 @@ window.APP = APP = new class
       triangleVertexData.push datum for datum in verticiesData
       triangleFacesData.push datum for datum in facesData
 
-    @createVertexAndFaceBuffers(decals, triangleVertexData, triangleFacesData)
+    @createVertexAndFaceBuffers(name, decals, triangleVertexData, triangleFacesData)
     return decals
 
   initTexture: ->
@@ -510,23 +510,33 @@ window.APP = APP = new class
 
     return
 
+  initElements: ->
+    @image = document.getElementsByTagName('img')[0]
+    @video = document.getElementsByTagName('video')[0]
+
   init: ->
     try
       @initCanvas()
       @initGLContext()
+
+      @beginInitShaders?()
       @shaderProgram = @createNamedShader('hexagon', ['position', 'texPosition'], ['factor', 'screenRatio', 'sampler', 'brightnessAdjust'])
       @bumpShaderProgram = @createNamedShader('bump', ['position', 'r'], ['factor', 'screenRatio', 'sampler'])
       @backgroundShaderProgram = @createNamedShader('background', ['position'], ['factor', 'screenRatio', 'sampler'])
       @decalShaderProgram = @createNamedShader('decal', ['position'], ['factor', 'screenRatio', 'transform'])
-      @bigHexagons = @initHexagons(HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR)
-      @smallHexagons = @initHexagons(SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
-      @circleSegments = @initCircleSegments(CIRCLE_SEGMENTS, INNER_RING_RADIUS)
-      @backgroundSquare = @initBackgroundSquare()
-      @innerDecals = @initDecals(true)
-      @outerDecals = @initDecals(false)
+      @endInitShaders?()
+
+      @beginInitShapes?()
+      @bigHexagons = @initHexagons('bigHaxagons', HEXAGONS_HIGH, SCREEN_RATIO, OUTER_RING_RADIUS + RING_WIDTH, Infinity, OUTER_ZOOM_FACTOR)
+      @smallHexagons = @initHexagons('smallHexagons', SMALL_HEXAGONS_HIGH, 1, INNER_RING_RADIUS + RING_WIDTH, OUTER_RING_RADIUS, INNER_ZOOM_FACTOR)
+      @circleSegments = @initCircleSegments('circleSegments', CIRCLE_SEGMENTS, INNER_RING_RADIUS)
+      @backgroundSquare = @initBackgroundSquare('backgroundSquare')
+      @innerDecals = @initDecals('innerDecals', true)
+      @outerDecals = @initDecals('outerDecals', false)
+      @endInitShapes?()
+
       @initTexture()
-      @image = document.getElementsByTagName('img')[0]
-      @video = document.getElementsByTagName('video')[0]
+      @initElements()
       @GL.clearColor(0.0, 0.0, 0.0, 0.0)
       return true
     catch e
@@ -640,4 +650,9 @@ window.APP = APP = new class
   start: =>
     @init() and @run()
 
-window.addEventListener 'DOMContentLoaded', APP.start, false
+
+if window?
+  window.APP = APP = new App
+  window.addEventListener 'DOMContentLoaded', APP.start, false
+else
+  module.exports = App
