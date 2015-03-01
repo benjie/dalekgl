@@ -75,7 +75,7 @@ void *video_decode_test(void* arg)
    memset(list, 0, sizeof(list));
    memset(tunnel, 0, sizeof(tunnel));
 
-   if((in = fopen(filename, "rb")) == NULL)
+   if((in = stdin) == NULL)
       return (void *)-2;
 
    if((client = ilclient_init()) == NULL)
