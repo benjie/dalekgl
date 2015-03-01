@@ -210,6 +210,7 @@ class App
       pos2.x /= screenRatio;
       pos2 = pos2 + 1.;
       pos2 = pos2 / 2.;
+      pos2.y = 1.0 - pos2.y;
       vUV = pos2;
     }
     """
@@ -246,6 +247,7 @@ class App
       pos2 = pos2 + 1.;
       pos2 = pos2 / 2.;
       vR = r;
+      pos2.y = 1.0 - pos2.y;
       vUV = pos2;
     }
     """
@@ -281,6 +283,7 @@ class App
       pos2.x /= screenRatio;
       pos2 = pos2 + 1.;
       pos2 = pos2 / 2.;
+      pos2.y = 1.0 - pos2.y;
       vUV = pos2;
     }
     """
@@ -500,7 +503,7 @@ class App
   initTexture: ->
     # https://dev.opera.com/articles/webgl-post-processing/
     @texture = @GL.createTexture()
-    @GL.pixelStorei(@GL.UNPACK_FLIP_Y_WEBGL, true)
+    #@GL.pixelStorei(@GL.UNPACK_FLIP_Y_WEBGL, true)
     @GL.bindTexture(@GL.TEXTURE_2D, @texture)
     @GL.texParameteri(@GL.TEXTURE_2D, @GL.TEXTURE_WRAP_S, @GL.CLAMP_TO_EDGE)
     @GL.texParameteri(@GL.TEXTURE_2D, @GL.TEXTURE_WRAP_T, @GL.CLAMP_TO_EDGE)

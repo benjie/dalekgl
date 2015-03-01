@@ -220,15 +220,15 @@
 
     colourAdjustmentCode = "pixelColour = vec3(raw);\npixelColour += brightness;\npixelColour = ((pixelColour - 0.5) * max(contrast, 0.)) + 0.5;\npixelColour.x /= 2.;\npixelColour.x -= 0.3;\npixelColour.y -= 0.15;\npixelColour.z *= 0.55;\npixelColour.z += 0.45;\n\ngl_FragColor = vec4(pixelColour, 1.0);";
 
-    App.prototype.hexagonVertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
+    App.prototype.hexagonVertexShaderSource = "attribute vec2 position;\nattribute vec2 texPosition;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = texPosition;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  pos2.y = 1.0 - pos2.y;\n  vUV = pos2;\n}";
 
     App.prototype.hexagonFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nuniform float brightnessAdjust;\nvarying vec2 vUV;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  brightness += brightnessAdjust;\n  " + colourAdjustmentCode + "\n}";
 
-    App.prototype.bumpVertexShaderSource = "attribute vec2 position;\nattribute float r;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\nvarying float vR;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vR = r;\n  vUV = pos2;\n}";
+    App.prototype.bumpVertexShaderSource = "attribute vec2 position;\nattribute float r;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\nvarying float vR;\n\nvoid main(void) {\n  vec2 pos = position;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vR = r;\n  pos2.y = 1.0 - pos2.y;\n  vUV = pos2;\n}";
 
     App.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nvarying float vR;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec2 uv = vUV * 2. - 1.;\n  uv[0] *= pow(vR, 1.3);\n  uv[1] *= pow(vR, 1.3);\n  uv = (uv + 1.) / 2.;\n  vec4 raw = texture2D(sampler, uv);\n  " + colourAdjustmentCode + "\n}";
 
-    App.prototype.backgroundVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_Position = vec4(position, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= factor;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  vUV = pos2;\n}";
+    App.prototype.backgroundVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_Position = vec4(position, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= factor;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  pos2.y = 1.0 - pos2.y;\n  vUV = pos2;\n}";
 
     App.prototype.backgroundFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nfloat darkenAmount = 0.6;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  raw = vec4(vec3(raw) - darkenAmount, 1.);\n  " + colourAdjustmentCode + "\n  gl_FragColor = vec4(pixelColour, 1.);\n}";
 
@@ -435,7 +435,6 @@
 
     App.prototype.initTexture = function() {
       this.texture = this.GL.createTexture();
-      this.GL.pixelStorei(this.GL.UNPACK_FLIP_Y_WEBGL, true);
       this.GL.bindTexture(this.GL.TEXTURE_2D, this.texture);
       this.GL.texParameteri(this.GL.TEXTURE_2D, this.GL.TEXTURE_WRAP_S, this.GL.CLAMP_TO_EDGE);
       this.GL.texParameteri(this.GL.TEXTURE_2D, this.GL.TEXTURE_WRAP_T, this.GL.CLAMP_TO_EDGE);

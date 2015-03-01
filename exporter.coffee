@@ -80,8 +80,6 @@ class Exporter extends App
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         check();
 
-        // TEMPORARY
-
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, IMAGE_SIZE_WIDTH, IMAGE_SIZE_HEIGHT, 0,
                 GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         check();
