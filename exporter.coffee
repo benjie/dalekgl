@@ -82,9 +82,26 @@ class Exporter extends App
 
         // TEMPORARY
 
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, IMAGE_SIZE, IMAGE_SIZE, 0,
-                GL_RGB, GL_UNSIGNED_BYTE, state->tex_buf1);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, IMAGE_SIZE_WIDTH, IMAGE_SIZE_HEIGHT, 0,
+                GL_RGBA, GL_UNSIGNED_BYTE, NULL);
         check();
+
+        /* Create EGL Image */
+        eglImage = eglCreateImageKHR(
+                     state->display,
+                     state->context,
+                     EGL_GL_TEXTURE_2D_KHR,
+                     (EGLClientBuffer)state->texture,
+                     0);
+
+        if (eglImage == EGL_NO_IMAGE_KHR)
+        {
+           printf("eglCreateImageKHR failed.\\n");
+           exit(1);
+        }
+
+        // Start rendering
+        pthread_create(&thread1, NULL, video_decode_test, eglImage);
 
 
 
@@ -211,9 +228,12 @@ class Exporter extends App
       #include "GLES2/gl2.h"
       #include "EGL/egl.h"
       #include "EGL/eglext.h"
+      #include "triangle2.h"
 
       #define PATH "./"
       #define IMAGE_SIZE 128
+      #define IMAGE_SIZE_WIDTH 1920
+      #define IMAGE_SIZE_HEIGHT 1080
 
       typedef struct
       {
@@ -253,6 +273,8 @@ class Exporter extends App
       } CUBE_STATE_T;
 
       static CUBE_STATE_T _state, *state=&_state;
+      static void* eglImage = 0;
+      static pthread_t thread1;
 
       #define check() assert(glGetError() == 0)
 
@@ -517,7 +539,6 @@ class Exporter extends App
         //draw_mandelbrot_to_texture(state);
         while (1)
         {
-          printf("Drawing...\\n");
           draw_triangles(state);
         }
         return 0;
