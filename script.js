@@ -234,7 +234,7 @@
 
     App.prototype.decalVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nuniform mat2 transform;\n\nvoid main(void) {\n  vec2 pos = position;\n  // Rotate by angle\n  pos = transform * pos;\n  pos.x *= factor;\n  gl_Position = vec4(pos, 0., 1.);\n}";
 
-    App.prototype.decalFragmentShaderSource = "precision mediump float;\n\nvoid main(void) {\n  gl_FragColor = vec4(0.4, 0.7, 1., 0.2);\n}";
+    App.prototype.decalFragmentShaderSource = "precision mediump float;\n\nvoid main(void) {\n  gl_FragColor = vec4(0.4, 0.7, 1., 1.);\n}";
 
     App.prototype.getShader = function(type, source) {
       var shader;

@@ -323,7 +323,7 @@ class App
     precision mediump float;
 
     void main(void) {
-      gl_FragColor = vec4(0.4, 0.7, 1., 0.2);
+      gl_FragColor = vec4(0.4, 0.7, 1., 1.);
     }
     """
 
