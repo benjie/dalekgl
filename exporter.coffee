@@ -1,4 +1,6 @@
 {App, SCREEN_RATIO} = require './script'
+VIDEO_WIDTH=1920
+VIDEO_HEIGHT=1080
 
 class Exporter extends App
   beginInitShaders: ->
@@ -278,8 +280,8 @@ class Exporter extends App
 
       #define PATH "./"
       #define IMAGE_SIZE 128
-      #define IMAGE_SIZE_WIDTH 1920
-      #define IMAGE_SIZE_HEIGHT 1080
+      #define IMAGE_SIZE_WIDTH #{VIDEO_WIDTH}
+      #define IMAGE_SIZE_HEIGHT #{VIDEO_HEIGHT}
 
       typedef struct
       {
@@ -500,8 +502,8 @@ class Exporter extends App
         glActiveTexture(GL_TEXTURE0);
       """
     @canvas =
-      width: 100
-      height: 100
+      width: VIDEO_WIDTH
+      height: VIDEO_HEIGHT
     @video =
       loaded: true
       paused: false
