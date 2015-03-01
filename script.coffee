@@ -560,7 +560,7 @@ class App
     @GL.texImage2D(@GL.TEXTURE_2D, 0, @GL.RGBA, @GL.RGBA, @GL.UNSIGNED_BYTE, textureSource)
 
     @backgroundShaderProgram.use =>
-      @GL.uniform1f(@backgroundShaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@backgroundShaderProgram._factor, @canvas.height / @canvas.width)
       @GL.uniform1f(@backgroundShaderProgram._screenRatio, SCREEN_RATIO)
       @GL.uniform1i(@backgroundShaderProgram._sampler, 0)
 
@@ -572,7 +572,7 @@ class App
 
 
     @shaderProgram.use =>
-      @GL.uniform1f(@shaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@shaderProgram._factor, @canvas.height / @canvas.width)
       @GL.uniform1f(@shaderProgram._screenRatio, SCREEN_RATIO)
       @GL.uniform1i(@shaderProgram._sampler, 0)
 
@@ -587,7 +587,7 @@ class App
         @GL.drawElements(@GL.TRIANGLES, hexagons.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
     @bumpShaderProgram.use =>
-      @GL.uniform1f(@bumpShaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@bumpShaderProgram._factor, @canvas.height / @canvas.width)
       @GL.uniform1f(@bumpShaderProgram._screenRatio, SCREEN_RATIO)
       @GL.uniform1i(@bumpShaderProgram._sampler, 0)
       @GL.bindBuffer(@GL.ARRAY_BUFFER, @circleSegments.triangleVertex)
@@ -598,7 +598,7 @@ class App
       @GL.drawElements(@GL.TRIANGLES, @circleSegments.triangleFacesData.length, @GL.UNSIGNED_SHORT, 0)
 
     @decalShaderProgram.use =>
-      @GL.uniform1f(@decalShaderProgram._factor, canvas.height / canvas.width)
+      @GL.uniform1f(@decalShaderProgram._factor, @canvas.height / @canvas.width)
       @GL.uniform1f(@decalShaderProgram._screenRatio, SCREEN_RATIO)
       for decals, i in [@innerDecals, @outerDecals]
         currentTime = Date.now()
@@ -629,7 +629,7 @@ class App
 
     @GL.flush()
 
-    window.requestAnimationFrame(@draw)
+    window?.requestAnimationFrame(@draw)
     return
 
   run: ->

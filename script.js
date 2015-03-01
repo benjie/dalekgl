@@ -496,7 +496,7 @@
       this.GL.texImage2D(this.GL.TEXTURE_2D, 0, this.GL.RGBA, this.GL.RGBA, this.GL.UNSIGNED_BYTE, textureSource);
       this.backgroundShaderProgram.use((function(_this) {
         return function() {
-          _this.GL.uniform1f(_this.backgroundShaderProgram._factor, canvas.height / canvas.width);
+          _this.GL.uniform1f(_this.backgroundShaderProgram._factor, _this.canvas.height / _this.canvas.width);
           _this.GL.uniform1f(_this.backgroundShaderProgram._screenRatio, SCREEN_RATIO);
           _this.GL.uniform1i(_this.backgroundShaderProgram._sampler, 0);
           _this.GL.bindBuffer(_this.GL.ARRAY_BUFFER, _this.backgroundSquare.triangleVertex);
@@ -508,7 +508,7 @@
       this.shaderProgram.use((function(_this) {
         return function() {
           var hexagons, i, _i, _len, _ref, _results;
-          _this.GL.uniform1f(_this.shaderProgram._factor, canvas.height / canvas.width);
+          _this.GL.uniform1f(_this.shaderProgram._factor, _this.canvas.height / _this.canvas.width);
           _this.GL.uniform1f(_this.shaderProgram._screenRatio, SCREEN_RATIO);
           _this.GL.uniform1i(_this.shaderProgram._sampler, 0);
           _ref = [_this.bigHexagons, _this.smallHexagons];
@@ -527,7 +527,7 @@
       })(this));
       this.bumpShaderProgram.use((function(_this) {
         return function() {
-          _this.GL.uniform1f(_this.bumpShaderProgram._factor, canvas.height / canvas.width);
+          _this.GL.uniform1f(_this.bumpShaderProgram._factor, _this.canvas.height / _this.canvas.width);
           _this.GL.uniform1f(_this.bumpShaderProgram._screenRatio, SCREEN_RATIO);
           _this.GL.uniform1i(_this.bumpShaderProgram._sampler, 0);
           _this.GL.bindBuffer(_this.GL.ARRAY_BUFFER, _this.circleSegments.triangleVertex);
@@ -540,7 +540,7 @@
       this.decalShaderProgram.use((function(_this) {
         return function() {
           var angle, currentTime, decals, i, interval, intervalCount, intervalDuration, position, rotationAmount, step, _i, _len, _ref, _results;
-          _this.GL.uniform1f(_this.decalShaderProgram._factor, canvas.height / canvas.width);
+          _this.GL.uniform1f(_this.decalShaderProgram._factor, _this.canvas.height / _this.canvas.width);
           _this.GL.uniform1f(_this.decalShaderProgram._screenRatio, SCREEN_RATIO);
           _ref = [_this.innerDecals, _this.outerDecals];
           _results = [];
@@ -574,7 +574,9 @@
         };
       })(this));
       this.GL.flush();
-      window.requestAnimationFrame(this.draw);
+      if (typeof window !== "undefined" && window !== null) {
+        window.requestAnimationFrame(this.draw);
+      }
     };
 
     App.prototype.run = function() {
