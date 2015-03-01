@@ -630,7 +630,9 @@
   } else {
     module.exports = {
       App: App,
-      SCREEN_RATIO: SCREEN_RATIO
+      SCREEN_RATIO: SCREEN_RATIO,
+      ANIMATION_DURATION: ANIMATION_DURATION,
+      ANIMATION_INTERVAL: ANIMATION_INTERVAL
     };
   }
 

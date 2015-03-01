@@ -1,8 +1,9 @@
-{App, SCREEN_RATIO} = require './script'
+{App, SCREEN_RATIO, ANIMATION_DURATION, ANIMATION_INTERVAL} = require './script'
 VIDEO_WIDTH=1920
 VIDEO_HEIGHT=1080
 
 class Exporter extends App
+  decalRotationMatrix: (inner) -> "decal_rotation_matrix(#{if inner then 1 else 0})"
   beginInitShaders: ->
     @output.push "\n\nstatic void init_shaders(CUBE_STATE_T *state)\n{"
 
@@ -205,7 +206,13 @@ class Exporter extends App
       @GL =
         uniform1f: (prop, val) => @output.push "  glUniform1f(state->#{name}_unif_#{prop}, #{val});check();"
         uniform1i: (prop, val) => @output.push "  glUniform1i(state->#{name}_unif_#{prop}, #{val});check();"
-        uniformMatrix2fv: (prop, transpose, val) => @output.push "  glUniformMatrix2fv(state->#{name}_unif_#{prop}, #{val.length}, GL_FALSE, (GLfloat[]){#{Array::slice.call(val).join(",")}});check();"
+        uniformMatrix2fv: (prop, transpose, val) =>
+          if typeof val is 'string'
+            # do nothing - likely a function call
+          else
+            # interpret as array
+            val = "(GLfloat[]){#{Array::slice.call(val).join(",")}}"
+          @output.push "  glUniformMatrix2fv(state->#{name}_unif_#{prop}, 4, GL_FALSE, #{val});check();"
         bindBuffer: (type, target) =>
           if type is @GL.ARRAY_BUFFER
             typeName = "GL_ARRAY_BUFFER"
@@ -220,7 +227,7 @@ class Exporter extends App
           throw new Error "target '#{target}' not found for #{typeName}" unless targetName
           @output.push "  glBindBuffer(#{typeName}, #{targetName});check();"
         vertexAttribPointer: (attribute, sthg, type, flse, step, offset) =>
-          @output.push "  glVertexAttribPointer(state->#{name}_attr_#{attribute}, #{sthg}, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * #{step/4}, sizeof(GLfloat) * #{offset/4});check();"
+          @output.push "  glVertexAttribPointer(state->#{name}_attr_#{attribute}, #{sthg}, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * #{step/4}, (char *)NULL + sizeof(GLfloat) * #{offset/4});check();"
         drawElements: (method, count, type, sthg) =>
           @output.push "  glDrawElements(GL_TRIANGLES, #{count}, GL_UNSIGNED_SHORT, #{sthg});check();"
 
@@ -270,6 +277,7 @@ class Exporter extends App
       #include <math.h>
       #include <assert.h>
       #include <unistd.h>
+      #include <sys/time.h>
 
       #include "bcm_host.h"
 
@@ -282,6 +290,8 @@ class Exporter extends App
       #define IMAGE_SIZE 128
       #define IMAGE_SIZE_WIDTH #{VIDEO_WIDTH}
       #define IMAGE_SIZE_HEIGHT #{VIDEO_HEIGHT}
+      #define max(a,b) (a > b ? a : b)
+      #define PI M_PI
 
       typedef struct
       {
@@ -494,6 +504,46 @@ class Exporter extends App
       """
     @output = @output.concat(@shaderMethods)
     @output.push """
+
+      GLfloat rotation_matrix[4];
+      static GLfloat* decal_rotation_matrix(int inner)
+      {
+        struct timeval tv;
+        gettimeofday(&tv, NULL);
+
+        unsigned int interval_duration = #{ANIMATION_DURATION};
+        unsigned int interval_count = #{ANIMATION_INTERVAL};
+        interval_count = max(ceil(interval_count / 2.) * 2, 2);
+
+        unsigned long current_time = (long long)((tv.tv_sec) * 1000. + (tv.tv_usec) / 1000.) % (interval_duration * interval_count);
+
+        //unsigned long long interval = floor(current_time / (GLfloat)interval_duration);
+        //unsigned int step = interval % interval_count;
+
+        int interval = floor(current_time / (GLfloat)interval_duration);
+        int step = interval % interval_count;
+        GLfloat rotation_amount, position;
+        if (step == 0) {
+          position = (current_time % interval_duration) / (interval_duration - 1.);
+          rotation_amount = sin(position * PI / 2);
+        } else if (step == interval_count / 2) {
+          position = (current_time % interval_duration) / (interval_duration - 1.);
+          rotation_amount = sin((1 - position) * PI / 2);
+        } else if (step < interval_count / 2) {
+          rotation_amount = 1;
+        } else {
+          rotation_amount = 0;
+        }
+        GLfloat angle = rotation_amount * (inner == 1 ? PI/4 : -PI/4);
+
+
+
+        rotation_matrix[0] = cos(angle);
+        rotation_matrix[1] = -sin(angle);
+        rotation_matrix[2] = sin(angle);
+        rotation_matrix[3] = cos(angle);
+        return rotation_matrix;
+      }
 
       static void draw_triangles(CUBE_STATE_T *state)
       {

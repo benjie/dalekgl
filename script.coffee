@@ -661,4 +661,4 @@ if window?
   window.APP = APP = new App
   window.addEventListener 'DOMContentLoaded', APP.start, false
 else
-  module.exports = {App, SCREEN_RATIO}
+  module.exports = {App, SCREEN_RATIO, ANIMATION_DURATION, ANIMATION_INTERVAL}
