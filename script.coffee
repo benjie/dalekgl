@@ -279,8 +279,7 @@ class App
     void main(void) {
       gl_Position = vec4(position, 0., 1.);
       vec2 pos2 = position;
-      pos2.x /= factor;
-      pos2.x /= screenRatio;
+      pos2 /= #{OUTER_ZOOM_FACTOR};
       pos2 = pos2 + 1.;
       pos2 = pos2 / 2.;
       pos2.y = 1.0 - pos2.y;

@@ -228,7 +228,7 @@
 
     App.prototype.bumpFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nvarying float vR;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec2 uv = vUV * 2. - 1.;\n  uv[0] *= pow(vR, 1.3);\n  uv[1] *= pow(vR, 1.3);\n  uv = (uv + 1.) / 2.;\n  vec4 raw = texture2D(sampler, uv);\n  " + colourAdjustmentCode + "\n}";
 
-    App.prototype.backgroundVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_Position = vec4(position, 0., 1.);\n  vec2 pos2 = position;\n  pos2.x /= factor;\n  pos2.x /= screenRatio;\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  pos2.y = 1.0 - pos2.y;\n  vUV = pos2;\n}";
+    App.prototype.backgroundVertexShaderSource = "attribute vec2 position;\nuniform float factor;\nuniform float screenRatio;\nvarying vec2 vUV;\n\nvoid main(void) {\n  gl_Position = vec4(position, 0., 1.);\n  vec2 pos2 = position;\n  pos2 /= " + OUTER_ZOOM_FACTOR + ";\n  pos2 = pos2 + 1.;\n  pos2 = pos2 / 2.;\n  pos2.y = 1.0 - pos2.y;\n  vUV = pos2;\n}";
 
     App.prototype.backgroundFragmentShaderSource = "precision mediump float;\nuniform sampler2D sampler;\nvarying vec2 vUV;\nfloat darkenAmount = 0.6;\n\n" + colourAdjustmentDeclarations + "\n\nvoid main(void) {\n  vec4 raw = texture2D(sampler, vUV);\n  raw = vec4(vec3(raw) - darkenAmount, 1.);\n  " + colourAdjustmentCode + "\n  gl_FragColor = vec4(pixelColour, 1.);\n}";
 
