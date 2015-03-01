@@ -20,8 +20,11 @@ class Exporter extends App
 
   createVertexAndFaceBuffers: (name, object, vertexData, facesData) ->
     @buffers.push {name, object, vertexData, facesData}
+    object.name = name
     object.triangleVertexData = vertexData
     object.triangleFacesData = facesData
+    object.triangleVertex = Math.random()
+    object.triangleFaces = Math.random()
     block = (data, indent, size) ->
       indentString = new Array(indent + 1).join(" ")
       dataString = []
@@ -110,7 +113,7 @@ class Exporter extends App
       """
   initElements: ->
   createNamedShader: (name, attributes, uniforms) ->
-    return if name in ['decal', 'bump']
+    program = {}
     @shaders.push {name, attributes, uniforms}
     enableVertexArrays = (enable = true) ->
       tmp = []
@@ -190,8 +193,53 @@ class Exporter extends App
 
     for attribute in attributes
       output.push "  state->#{name}_attr_#{attribute} = glGetAttribLocation(state->#{name}Program, \"#{attribute}\");\n  check();"
+      program["_#{attribute}"] = attribute
     for uniform in uniforms
       output.push "  state->#{name}_unif_#{uniform} = glGetUniformLocation(state->#{name}Program, \"#{uniform}\");\n  check();"
+      program["_#{uniform}"] = uniform
+
+    program.use = (fn) =>
+      oldGL = @GL
+      @GL =
+        uniform1f: (prop, val) => @output.push "  glUniform1f(state->#{name}_unif_#{prop}, #{val});check();"
+        uniform1i: (prop, val) => @output.push "  glUniform1i(state->#{name}_unif_#{prop}, #{val});check();"
+        uniformMatrix2fv: (prop, transpose, val) => @output.push "  glUniformMatrix2fv(state->#{name}_unif_#{prop}, #{val.length}, GL_FALSE, (GLfloat[]){#{Array::slice.call(val).join(",")}});check();"
+        bindBuffer: (type, target) =>
+          if type is @GL.ARRAY_BUFFER
+            typeName = "GL_ARRAY_BUFFER"
+            for k, v of @ when v?.triangleVertex is target
+              targetName = "state->#{v.name}VertexBuffer"
+          else if type is @GL.ELEMENT_ARRAY_BUFFER
+            typeName = "GL_ELEMENT_ARRAY_BUFFER"
+            for k, v of @ when v?.triangleFaces is target
+              targetName = "state->#{v.name}FacesBuffer"
+          else
+            throw new Error "Unknown type"
+          throw new Error "target '#{target}' not found for #{typeName}" unless targetName
+          @output.push "  glBindBuffer(#{typeName}, #{targetName});check();"
+        vertexAttribPointer: (attribute, sthg, type, flse, step, offset) =>
+          @output.push "  glVertexAttribPointer(state->#{name}_attr_#{attribute}, #{sthg}, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * #{step/4}, sizeof(GLfloat) * #{offset/4});check();"
+        drawElements: (method, count, type, sthg) =>
+          @output.push "  glDrawElements(GL_TRIANGLES, #{count}, GL_UNSIGNED_SHORT, #{sthg});check();"
+
+      @output.push """
+
+
+        //////////////////////
+        // #{name}
+        //////////////////////
+        """
+      @GL[k] ?= v for k, v of oldGL
+
+      @output.push "  #{name}ShaderEnable(state);"
+      fn()
+      @output.push "  #{name}ShaderDisable(state);"
+      @output.push ""
+
+      @GL = oldGL
+      return
+
+    return program
 
   export: ->
     @output = []
@@ -449,69 +497,29 @@ class Exporter extends App
       {
         // Now render to the main frame buffer
         glBindFramebuffer(GL_FRAMEBUFFER,0);
-        // Clear the background (not really necessary I suppose)
-        glViewport(0, 0, state->screen_width, state->screen_height);
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
-        check();
-
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, state->texture);
-        check();
+      """
+    @canvas =
+      width: 100
+      height: 100
+    @video =
+      loaded: true
+      paused: false
+    @GL =
+      ARRAY_BUFFER: 'ARRAY_BUFFER'
+      ELEMENT_ARRAY_BUFFER: 'ELEMENT_ARRAY_BUFFER'
+      viewport: (x, y, w, h) => @output.push "  glViewport(0, 0, state->screen_width, state->screen_height);check();"
+      clear: (modes) => @output.push "  glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);check();"
+      bindTexture: (type, texture) => @output.push "  glBindTexture(GL_TEXTURE_2D, state->texture);check();"
+      texImage2D: => ""
+      flush: => @output.push "  glFlush();check();"
+      finish: => @output.push "  glFinish();check();"
 
-        backgroundShaderEnable(state);
-        check();
-        glUniform1f(state->background_unif_factor, state->screen_height / (GLfloat)state->screen_width);
-        check();
-        glUniform1f(state->background_unif_screenRatio, #{SCREEN_RATIO});
-        check();
-        //glUniform1f(state->background_unif_sampler, 0);
-        glUniform1i(state->background_unif_sampler, 0);
-        check();
+    @draw()
 
-        glBindBuffer(GL_ARRAY_BUFFER, state->backgroundSquareVertexBuffer);
-        check();
-        glVertexAttribPointer(state->background_attr_position, 2, GL_FLOAT, GL_FALSE, sizeof(GLfloat)*(2+0), 0);
-        check();
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, state->backgroundSquareFacesBuffer);
-        check();
-        glDrawElements(GL_TRIANGLES, #{@backgroundSquare.triangleFacesData.length}, GL_UNSIGNED_SHORT, 0);
-        check();
-
-        backgroundShaderDisable(state);
-        check();
-
-
-
-
-
+    @output.push """
         glBindTexture(GL_TEXTURE_2D, 0);
-
-        /*
-        glBindBuffer(GL_ARRAY_BUFFER, state->buf);
-        check();
-        glUseProgram ( state->program );
-        check();
-        glBindTexture(GL_TEXTURE_2D,state->tex);
-        check();
-        glUniform4f(state->unif_color, 0.5, 0.5, 0.8, 1.0);
-        glUniform2f(state->unif_scale, scale, scale);
-        glUniform2f(state->unif_offset, x, y);
-        glUniform2f(state->unif_centre, cx, cy);
-        glUniform1i(state->unif_tex, 0); // I don't really understand this part, perhaps it relates to active texture?
-        check();
-
-        glDrawArrays ( GL_TRIANGLE_FAN, 0, 4 );
-        check();
-
         glBindBuffer(GL_ARRAY_BUFFER, 0);
-        */
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-        glFlush();
-        check();
-        glFinish();
-        check();
 
         eglSwapBuffers(state->display, state->surface);
         check();
