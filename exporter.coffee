@@ -288,8 +288,8 @@ class Exporter extends App
 
       #define PATH "./"
       #define IMAGE_SIZE 128
-      #define IMAGE_SIZE_WIDTH #{VIDEO_WIDTH}
-      #define IMAGE_SIZE_HEIGHT #{VIDEO_HEIGHT}
+      #define IMAGE_SIZE_WIDTH state->video_width
+      #define IMAGE_SIZE_HEIGHT state->video_height
       #define max(a,b) (a > b ? a : b)
       #define PI M_PI
 
@@ -325,6 +325,8 @@ class Exporter extends App
         GLuint unif_color, attr_vertex, unif_scale, unif_offset, unif_tex, unif_centre;
       // mandelbrot attribs
         GLuint attr_vertex2, unif_scale2, unif_offset2, unif_centre2;
+
+        int video_width, video_height;
 
         char * tex_buf1;
 
@@ -577,13 +579,22 @@ class Exporter extends App
         check();
       }
 
-      int main ()
+      int main (int argc, char *argv[])
       {
         bcm_host_init();
 
         // Clear application state
         memset(state, 0, sizeof(*state));
         state->verbose = 1;
+        state->video_width = #{VIDEO_WIDTH};
+        state->video_height = #{VIDEO_HEIGHT};
+        if (argc == 2) {
+          sscanf (argv[1], "%i", &state->video_height);
+          state->video_width = state->video_height * #{SCREEN_RATIO};
+        } else if (argc > 2) {
+          sscanf (argv[1], "%i", &state->video_height);
+          sscanf (argv[2], "%i", &state->video_width);
+        }
 
         printf("Initialising...\\n");
         // Start OGLES
