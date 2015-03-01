@@ -284,7 +284,7 @@ class Exporter extends App
       #include "GLES2/gl2.h"
       #include "EGL/egl.h"
       #include "EGL/eglext.h"
-      #include "triangle2.h"
+      #include "dalek.h"
 
       #define PATH "./"
       #define IMAGE_SIZE 128

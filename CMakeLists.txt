@@ -1,5 +1,5 @@
-set(EXEC hello_triangle2.bin)
-set(SRCS triangle2.c video.c)
+set(EXEC hello_dalek.bin)
+set(SRCS dalek.c video.c)
 
 add_executable(${EXEC} ${SRCS})
 target_link_libraries(${EXEC} ${HELLO_PI_LIBS})
