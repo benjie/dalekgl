@@ -487,6 +487,29 @@
       }
     };
 
+    App.prototype.decalRotationMatrix = function(inner) {
+      var angle, currentTime, interval, intervalCount, intervalDuration, position, rotationAmount, step;
+      currentTime = Date.now();
+      intervalDuration = ANIMATION_DURATION;
+      intervalCount = ANIMATION_INTERVAL;
+      intervalCount = Math.max(Math.ceil(intervalCount / 2) * 2, 2);
+      interval = Math.floor(currentTime / intervalDuration);
+      step = interval % intervalCount;
+      if (step === 0) {
+        position = (currentTime % intervalDuration) / (intervalDuration - 1);
+        rotationAmount = Math.sin(position * Math.PI / 2);
+      } else if (step === intervalCount / 2) {
+        position = (currentTime % intervalDuration) / (intervalDuration - 1);
+        rotationAmount = Math.sin((1 - position) * Math.PI / 2);
+      } else if (step < intervalCount / 2) {
+        rotationAmount = 1;
+      } else {
+        rotationAmount = 0;
+      }
+      angle = rotationAmount * (inner ? Math.PI / 4 : -Math.PI / 4);
+      return new Float32Array([Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle)]);
+    };
+
     App.prototype.draw = function() {
       var textureSource;
       this.GL.viewport(0.0, 0.0, this.canvas.width, this.canvas.height);
@@ -539,32 +562,14 @@
       })(this));
       this.decalShaderProgram.use((function(_this) {
         return function() {
-          var angle, currentTime, decals, i, interval, intervalCount, intervalDuration, position, rotationAmount, step, _i, _len, _ref, _results;
+          var decals, i, _i, _len, _ref, _results;
           _this.GL.uniform1f(_this.decalShaderProgram._factor, _this.canvas.height / _this.canvas.width);
           _this.GL.uniform1f(_this.decalShaderProgram._screenRatio, SCREEN_RATIO);
           _ref = [_this.innerDecals, _this.outerDecals];
           _results = [];
           for (i = _i = 0, _len = _ref.length; _i < _len; i = ++_i) {
             decals = _ref[i];
-            currentTime = Date.now();
-            intervalDuration = ANIMATION_DURATION;
-            intervalCount = ANIMATION_INTERVAL;
-            intervalCount = Math.max(Math.ceil(intervalCount / 2) * 2, 2);
-            interval = Math.floor(currentTime / intervalDuration);
-            step = interval % intervalCount;
-            if (step === 0) {
-              position = (currentTime % intervalDuration) / (intervalDuration - 1);
-              rotationAmount = Math.sin(position * Math.PI / 2);
-            } else if (step === intervalCount / 2) {
-              position = (currentTime % intervalDuration) / (intervalDuration - 1);
-              rotationAmount = Math.sin((1 - position) * Math.PI / 2);
-            } else if (step < intervalCount / 2) {
-              rotationAmount = 1;
-            } else {
-              rotationAmount = 0;
-            }
-            angle = rotationAmount * (i === 0 ? Math.PI / 4 : -Math.PI / 4);
-            _this.GL.uniformMatrix2fv(_this.decalShaderProgram._transform, _this.GL.FALSE, new Float32Array([Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle)]));
+            _this.GL.uniformMatrix2fv(_this.decalShaderProgram._transform, _this.GL.FALSE, _this.decalRotationMatrix(i === 0));
             _this.GL.bindBuffer(_this.GL.ARRAY_BUFFER, decals.triangleVertex);
             _this.GL.vertexAttribPointer(_this.decalShaderProgram._position, 2, _this.GL.FLOAT, false, 4 * (2 + 0), 0);
             _this.GL.bindBuffer(_this.GL.ELEMENT_ARRAY_BUFFER, decals.triangleFaces);

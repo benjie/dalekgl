@@ -547,6 +547,28 @@ class App
       alert("You are not compatible :(")
       return false
 
+  decalRotationMatrix: (inner) ->
+    currentTime = Date.now()
+    intervalDuration = ANIMATION_DURATION
+    intervalCount = ANIMATION_INTERVAL
+    intervalCount = Math.max(Math.ceil(intervalCount / 2) * 2, 2)
+    interval = Math.floor(currentTime / intervalDuration)
+    step = interval % intervalCount
+    if step == 0
+      # Animate
+      position = (currentTime % intervalDuration) / (intervalDuration - 1)
+      rotationAmount = Math.sin(position * Math.PI / 2)
+    else if step == intervalCount / 2
+      # Animate
+      position = (currentTime % intervalDuration) / (intervalDuration - 1)
+      rotationAmount = Math.sin((1 - position) * Math.PI / 2)
+    else if step < intervalCount / 2
+      rotationAmount = 1
+    else
+      rotationAmount = 0
+    angle = rotationAmount * (if inner then Math.PI/4 else -Math.PI/4)
+    new Float32Array([Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle)])
+
   draw: =>
     @GL.viewport(0.0, 0.0, @canvas.width, @canvas.height)
     @GL.clear(@GL.COLOR_BUFFER_BIT)
@@ -601,26 +623,7 @@ class App
       @GL.uniform1f(@decalShaderProgram._factor, @canvas.height / @canvas.width)
       @GL.uniform1f(@decalShaderProgram._screenRatio, SCREEN_RATIO)
       for decals, i in [@innerDecals, @outerDecals]
-        currentTime = Date.now()
-        intervalDuration = ANIMATION_DURATION
-        intervalCount = ANIMATION_INTERVAL
-        intervalCount = Math.max(Math.ceil(intervalCount / 2) * 2, 2)
-        interval = Math.floor(currentTime / intervalDuration)
-        step = interval % intervalCount
-        if step == 0
-          # Animate
-          position = (currentTime % intervalDuration) / (intervalDuration - 1)
-          rotationAmount = Math.sin(position * Math.PI / 2)
-        else if step == intervalCount / 2
-          # Animate
-          position = (currentTime % intervalDuration) / (intervalDuration - 1)
-          rotationAmount = Math.sin((1 - position) * Math.PI / 2)
-        else if step < intervalCount / 2
-          rotationAmount = 1
-        else
-          rotationAmount = 0
-        angle = rotationAmount * (if i == 0 then Math.PI/4 else -Math.PI/4)
-        @GL.uniformMatrix2fv(@decalShaderProgram._transform, @GL.FALSE, new Float32Array([Math.cos(angle), -Math.sin(angle), Math.sin(angle), Math.cos(angle)]))
+        @GL.uniformMatrix2fv(@decalShaderProgram._transform, @GL.FALSE, @decalRotationMatrix(i is 0))
         @GL.bindBuffer(@GL.ARRAY_BUFFER, decals.triangleVertex)
         @GL.vertexAttribPointer(@decalShaderProgram._position, 2, @GL.FLOAT, false, 4*(2+0), 0)
 
