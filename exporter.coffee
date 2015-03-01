@@ -140,7 +140,7 @@ class Exporter extends App
     output.push "  const GLchar *#{name}VertexShaderSource ="
     source = this["#{name}VertexShaderSource"]
     for line in source.split(/\n/)
-      output.push "    \"#{line}\""
+      output.push "    \"#{line}\\n\""
     output[output.length-1] += ";"
 
     output.push "  const GLchar *#{name}FragmentShaderSource ="
