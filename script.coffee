@@ -650,7 +650,7 @@ class App
         @video.src = window.URL?.createObjectURL(localMediaStream) ? localMediaStream
       @video.loaded = true
       @video.play()
-    , -> alert("GUM fail.")
+    , -> alert("GUM fail (requires SSL?).")
 
   start: =>
     @init() and @run()
